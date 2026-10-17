@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Контроль кассовой дисциплины</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --ink:#1c2230; --muted:#667085; --line:#e4e7ec; --accent:#b4122b; --ok:#127a3d; --warn:#b54708; }
+  * { box-sizing:border-box }
+  body { margin:0; font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink) }
+  main { max-width:980px; margin:0 auto; padding:24px 16px 64px }
+  h1 { font-size:22px; margin:0 0 4px } .sub { color:var(--muted); margin:0 0 20px }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center }
+  input[type=password] { padding:8px 10px; border:1px solid var(--line); border-radius:8px; min-width:220px }
+  .drop { border:2px dashed var(--line); border-radius:12px; padding:28px; text-align:center; color:var(--muted); cursor:pointer }
+  .drop.over { border-color:var(--accent); color:var(--ink) }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 18px; font-weight:600; cursor:pointer }
+  button:disabled { opacity:.5; cursor:default }
+  .bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:12px }
+  .bar > div { height:100%; width:0; background:var(--accent); transition:width .4s }
+  .verdict { font-size:20px; font-weight:700; padding:14px 18px; border-radius:10px }
+  .verdict.ok { background:#e7f6ec; color:var(--ok) } .verdict.bad { background:#fdecee; color:var(--accent) }
+  .v { border-top:1px solid var(--line); padding-top:16px; margin-top:16px }
+  .v h3 { margin:0 0 6px; font-size:17px } .tc { font-variant-numeric:tabular-nums; color:var(--accent); font-weight:700 }
+  .frames { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 }
+  .frames img { width:300px; max-width:100%; border-radius:8px; border:1px solid var(--line) }
+  .src { font-size:13px; color:var(--muted); background:#f9fafb; border-radius:8px; padding:8px 12px }
+  .note { font-size:13px; color:var(--muted) } .err { color:var(--accent) }
+  video { width:100%; border-radius:10px; margin-top:12px; background:#000 }
+</style>
+</head>
+<body>
+<main>
+  <h1>Контроль кассовой дисциплины по видео</h1>
+  <p class="sub">Загрузите видеозапись кассы — сервис покажет признаки возможных нарушений, таймкод, кадр и норматив.</p>
+
+  <div class="card">
+    <div class="row">
+      <label>API-ключ <input type="password" id="key" placeholder="X-API-Key"></label>
+    </div>
+    <div class="drop" id="drop" style="margin-top:14px">Перетащите видео (.mov) сюда или нажмите для выбора
+      <input type="file" id="file" accept="video/*,.mov" hidden></div>
+    <div class="row" style="margin-top:14px">
+      <button id="go" disabled>Проверить</button>
+      <span id="status" class="note"></span>
+    </div>
+    <div class="bar"><div id="prog"></div></div>
+    <video id="player" controls hidden></video>
+  </div>
+
+  <div id="result"></div>
+  <p class="note">Результат — подсказка для проверки человеком, а не юридическое заключение. Лица на кадрах размыты.</p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let file = null;
+try { $("key").value = localStorage.getItem("apiKey") || ""; } catch (e) {}
+$("key").onchange = () => { try { localStorage.setItem("apiKey", $("key").value); } catch (e) {} };
+
+function pick(f) {
+  if (!f) return;
+  file = f; $("drop").textContent = f.name + " (" + (f.size / 1048576).toFixed(1) + " МБ)";
+  $("go").disabled = false;
+  const p = $("player"); p.src = URL.createObjectURL(f); p.hidden = false;
+}
+$("drop").onclick = () => $("file").click();
+$("file").onchange = e => pick(e.target.files[0]);
+["dragover","dragenter"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave","drop"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+$("drop").addEventListener("drop", e => pick(e.dataTransfer.files[0]));
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = s => { const m = Math.floor(s / 60), r = (s % 60).toFixed(1).padStart(4, "0"); return m + ":" + r; };
+
+$("go").onclick = async () => {
+  $("go").disabled = true; $("result").innerHTML = ""; $("prog").style.width = "5%";
+  $("status").textContent = "Загрузка видео…";
+  const headers = { "X-API-Key": $("key").value };
+  const fd = new FormData(); fd.append("file", file);
+  try {
+    const r = await fetch("/api/v1/analyze", { method: "POST", headers, body: fd });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const { job_id } = await r.json();
+    $("status").textContent = "Анализ… (задача " + job_id + ")";
+    while (true) {
+      await new Promise(res => setTimeout(res, 1500));
+      const j = await (await fetch("/api/v1/jobs/" + job_id, { headers })).json();
+      if (j.status === "processing") { $("prog").style.width = (10 + 85 * (j.progress || 0)) + "%"; continue; }
+      $("prog").style.width = "100%";
+      if (j.status === "failed") throw new Error(j.error || "ошибка обработки");
+      render(j); $("status").textContent = "Готово"; break;
+    }
+  } catch (e) {
+    $("status").innerHTML = '<span class="err">Ошибка: ' + esc(e.message) + "</span>";
+  }
+  $("go").disabled = false;
+};
+
+function render(j) {
+  const bad = j.verdict === "violation";
+  let h = '<div class="card"><div class="verdict ' + (bad ? "bad" : "ok") + '">' +
+    (bad ? "Обнаружены признаки возможных нарушений: " + j.violations.length : "Нарушение не обнаружено") + "</div>";
+  for (const v of j.violations) {
+    h += '<div class="v"><h3>' + esc(v.type) + ' — <a href="#" class="tc" data-t="' + v.timecode_sec + '">' + fmt(v.timecode_sec) + "</a></h3>" +
+      "<div>" + esc(v.description) + "</div><div class=frames>" +
+      v.evidence_frames.map(f => '<img alt="кадр ' + f.timestamp_sec + ' c" src="data:image/jpeg;base64,' + f.image_base64 + '">').join("") +
+      "</div>" + (v.source ? '<div class="src"><b>Норматив:</b> ' + esc(v.rule) + "<br>" + esc(v.source) + "</div>" : "") + "</div>";
+  }
+  $("result").innerHTML = h + "</div>";
+  document.querySelectorAll(".tc").forEach(a => a.onclick = e => {
+    e.preventDefault(); const p = $("player"); p.currentTime = +a.dataset.t; p.play(); p.scrollIntoView({ behavior: "smooth" });
+  });
+}
+</script>
+</body>
+</html>

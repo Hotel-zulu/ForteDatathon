@@ -2,11 +2,8 @@
 .venv
 venv
 __pycache__
-.ipynb_checkpoints
-data/raw
-notebooks
-submissions
-reports
-catboost_info
-*.csv
-!models/
+open
+workdir
+*.mov
+*.docx
+.DS_Store

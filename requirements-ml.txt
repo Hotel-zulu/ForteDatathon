@@ -1,0 +1,11 @@
+# Модели (ставить по мере выбора подхода). ПРОВЕРЯЙТЕ ЛИЦЕНЗИЮ каждой модели/весов!
+# ⚠ ultralytics (YOLOv8/11) — AGPL-3.0: по FAQ п.24 рискованно. Предпочтительны Apache-2.0 / MIT.
+torch>=2.2
+torchvision>=0.17
+transformers>=4.45       # RT-DETR / D-FINE / Grounding DINO / VLM (Apache-2.0)
+accelerate>=0.30
+supervision>=0.20        # ByteTrack, зоны, отрисовка (MIT)
+onnxruntime>=1.17        # быстрый CPU/GPU-инференс экспортированных моделей
+# rtmlib                 # RTMPose без mmcv (Apache-2.0) — поза/руки
+# qwen-vl-utils          # если берёте Qwen-VL как верификатор (сверить лицензию весов!)
+jupyterlab>=4.1

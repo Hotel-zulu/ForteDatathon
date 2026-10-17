@@ -1,72 +1,56 @@
-# Forte Hackathon Starter 🏦
+# Контроль кассовой дисциплины по видео — ForteBank Datathon 26
 
-Готовый каркас для ML-хакатона: окружение, EDA одной командой, baseline с кросс-валидацией и блендом бустингов,
-NLP-baseline, Streamlit-демо, FastAPI и Docker. Всё уже проверено на синтетических банковских данных.
+AI-сервис: загружаете видео кассы → вердикт, тип нарушения, таймкод, кадр-доказательство и норматив РК.
+Полностью локальный (без облачных AI API), доступен через веб-интерфейс и API для жюри.
 
-## Быстрый старт (сделать ДО хакатона)
+## Быстрый старт
 
 ```bash
-# 1. Окружение (Python 3.11!)
-bash setup.sh                       # macOS/Linux
-powershell -ExecutionPolicy Bypass -File setup.ps1   # Windows
-# или conda:  conda env create -f environment.yml && conda activate forte
-
-# 2. Проверка, что у всех всё стоит
-python scripts/check_env.py
-
-# 3. Прогон всего пайплайна на синтетике — убедиться, что ничего не падает
-python scripts/make_fake_data.py
-python eda/quick_eda.py data/raw/train.csv --target target --test data/raw/test.csv --id id
-python -m src.train --train data/raw/train.csv --test data/raw/test.csv --target target --id id
-streamlit run app/streamlit_app.py
-uvicorn api.main:app --reload       # Swagger: http://localhost:8000/docs
-docker compose up --build           # API :8000 + демо :8501
+bash setup.sh                     # macOS/Linux (Windows: setup.ps1). Нужны Python 3.10/3.11 и ffmpeg
+source .venv/bin/activate
+python -m src.labels              # разметка open_labels.xlsx -> configs/labels.csv (проверка имён/таймкодов)
+make serve                        # http://localhost:8000  (UI)  и  /api/v1/...
+make tunnel                       # публичный URL через cloudflared (для жюри)
 ```
-
-## День хакатона: первые 30 минут
-
-| Минута | Действие | Команда |
-|---|---|---|
-| 0–5 | Положить данные в `data/raw/`, прочитать описание метрики | — |
-| 5–10 | EDA-отчёт → кинуть в чат команды | `python eda/quick_eda.py data/raw/train.csv --target <T> --test data/raw/test.csv --id <ID>` |
-| 10–25 | Baseline + первый сабмит | `python -m src.train --train ... --test ... --target <T> --id <ID> --metric <как в лидерборде>` |
-| 25–30 | Сабмит на платформу, сверить CV и лидерборд | — |
-
-Если CV и лидерборд сильно расходятся — проблема в валидации, а не в модели (см. `--group` и `--time-col`).
 
 ## Структура
 
 ```
+open/                    данные организаторов (НЕ в git): videos/*.mov, open_labels.xlsx
+configs/
+  regulations.yaml       тип нарушения -> документ, пункт, цитата. ЕДИНСТВЕННЫЙ источник ссылок
+  labels.csv             нормализованная разметка (генерируется)
 src/
-  train.py          CV (KFold / Stratified / Group / TimeSeries) + lgb/cb/xgb/hgb/linear + бленд + сабмит
-  features.py       add_features() — сюда ваш feature engineering; TablePrep — типы, категории, даты
-  models.py         единый интерфейс моделей; если бустинг не установился — fallback на sklearn
-  metrics.py        roc_auc, gini, f1, rmse, ... + подбор порога
-  inference.py      predict_df() — одна функция для API, Streamlit и скрипта
-  text_baseline.py  TF-IDF (слова + символы) + LogReg для текстов на рус/каз
-eda/quick_eda.py    HTML-отчёт: пропуски, распределения, корреляции, adversarial validation
-notebooks/          01_baseline.ipynb — то же самое в ноутбуке + анализ ошибок
-app/                Streamlit-демо: скоринг файла, ручной ввод, порог, важность признаков
-api/                FastAPI: /health, /model_info, /predict, /predict_file
-scripts/            check_env.py, make_fake_data.py
-reports/            eda_report.html, feature_importance.csv, experiments.csv (журнал всех запусков)
+  pipeline.py            analyze(video) -> {verdict, violations[...]} — главный вход
+  video_io.py            чтение видео, кадры по реальному времени, точный кадр по таймкоду
+  detectors/             perception (модели) + rule-детекторы + verifier (VLM)
+    base.py              интерфейсы FrameObs / Candidate / Detector / Verifier
+    examples.py          примеры правил: уход с рабочего места, телефон
+  evidence.py            кадр-доказательство: размытие лиц, рамки, JPEG base64
+  rules.py               загрузка regulations.yaml, формирование описания
+  labels.py              парсинг разметки (X/Х, «1минута 8 секунда»)
+  schemas.py             JSON-схема ответа из ТЗ
+api/main.py              POST /api/v1/analyze, GET /api/v1/jobs/{id}, X-API-Key, очередь задач
+app/index.html           веб-интерфейс (раздаётся тем же сервером на /)
+scripts/
+  extract_frames.py      кадры для разметки (10 fps, или только вокруг нарушений)
+  evaluate.py            качество на открытых видео: accuracy, пропуски, FP, ошибка таймкода
+  api_smoke_test.py      проверка API «как у жюри», с другой машины
+docs/                    ARCHITECTURE, ANNOTATION (что видно в роликах), CHECKLIST
+models/                  веса моделей (НЕ в git), README с лицензиями
 ```
 
-## Ключевые флаги `src.train`
+## Как развивать
 
-| Флаг | Когда использовать |
-|---|---|
-| `--metric gini` | Метрику **всегда** берите ту же, что в лидерборде. Банки часто используют Gini = 2·AUC−1 |
-| `--group client_id` | Несколько строк на одного клиента — иначе CV будет завышен (утечка через клиента) |
-| `--time-col date` | Test «из будущего» — валидация по времени вместо случайного KFold |
-| `--drop col1 col2` | Убрать утечки / мусор (id-подобные, «будущие» признаки) |
-| `--models lgb,cb` | Выбор моделей; `hgb,linear` работают вообще без бустингов |
-| `--tag fe_v2` | Подпись эксперимента в `reports/experiments.csv` |
+1. **Разметить типы**: просмотреть ролики, заполнить `docs/ANNOTATION.md` (`make frames-around` помогает).
+2. **Справочник**: для подтверждённых типов в `configs/regulations.yaml` поставить `enabled: true`,
+   сверить цитату на adilet.zan.kz → `verified: true`.
+3. **Perception**: реализовать в `src/detectors/__init__.py → build_perception()` (люди, роли, предметы, трекинг).
+4. **Детекторы**: по одному классу на тип нарушения (см. `examples.py`).
+5. **Verifier**: локальная VLM подтверждает кандидатов и пишет описание → меньше ложных срабатываний.
+6. После каждого изменения: `make eval`. Цель — 0 пропусков, минимум FP, ошибка таймкода < 1–2 c.
 
-## Что поменять под свой кейс
+## Сейчас
 
-1. `src/features.py → add_features()` — ваши фичи (они автоматически применятся и в API, и в демо).
-2. `app/streamlit_app.py` — заголовок, описание бизнес-проблемы, объяснение решения (SHAP).
-3. `README.md` — описание решения для жюри (как запустить, архитектура, метрики).
-
-См. также [CHECKLIST.md](CHECKLIST.md) — план подготовки и советы.
+Каркас работает end-to-end, но perception — заглушка, а все типы в справочнике выключены,
+поэтому сервис пока всегда отвечает `no_violation`. Это ожидаемо.

@@ -1,33 +1,29 @@
-# Python
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 .venv/
 venv/
 .env
-*.egg-info/
 
-# Данные и артефакты (НЕ коммитим датасеты организаторов — часто это нарушает правила/NDA)
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-*.csv
-*.parquet
+# Данные организаторов НЕ коммитим (FAQ 6: только в рамках хакатона)
+open/
+*.mov
+*.MOV
+*.mp4
 *.xlsx
-*.zip
-*.pkl
-*.joblib
-models/*
-!models/.gitkeep
-submissions/*
-!submissions/.gitkeep
-reports/*.html
-catboost_info/
-mlruns/
+Кейс_*.docx
+*.docx
+configs/labels.csv
 
-# IDE / OS
+# Артефакты
+workdir/
+models/*
+!models/README.md
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+.DS_Store
 .vscode/
 .idea/
-.DS_Store
-Thumbs.db

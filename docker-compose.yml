@@ -3,10 +3,10 @@ services:
     build: .
     ports: ["8000:8000"]
     env_file: [.env]
+    volumes: ["./workdir:/app/workdir"]
     restart: unless-stopped
-  app:
-    build: .
-    command: streamlit run app/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
-    ports: ["8501:8501"]
-    env_file: [.env]
-    depends_on: [api]
+    # Для GPU (NVIDIA Container Toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
