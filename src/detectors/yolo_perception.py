@@ -61,5 +61,7 @@ class YoloPerception(Perception):
 
     def reset(self):
         # сброс трекера между видео
-        if hasattr(self.model, "predictor") and self.model.predictor is not None:
-            self.model.predictor.trackers = None
+        # (None ломает новые версии ultralytics: len(None) -> TypeError на втором видео)
+        p = getattr(self.model, "predictor", None)
+        if p is not None and hasattr(p, "trackers"):
+            del p.trackers

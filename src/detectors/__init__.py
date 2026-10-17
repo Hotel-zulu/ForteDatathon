@@ -1,26 +1,30 @@
 """Реестр детекторов. Добавляйте сюда новые классы после реализации."""
 from src.detectors.base import Candidate, Detector, FrameObs, Perception, Verifier
-from src.detectors.examples import LeavingWorkplaceDetector, NullPerception, PhoneDetector
+from src.detectors.examples import NullPerception
 
 
 def build_perception() -> Perception:
-    """PERCEPTION=yolo (по умолчанию, если установлен ultralytics) | null.
+    """PERCEPTION=cashier (по умолчанию: наша модель + люди) | yolo (только COCO) | null.
 
-    TODO к финалу: Apache-2.0 детектор (RT-DETR / D-FINE) + поза (RTMPose). Веса — в models/, офлайн.
+    TODO к финалу: Apache-2.0 детектор (RT-DETR / D-FINE). Веса — в models/, офлайн.
     """
     import os
-    kind = os.getenv("PERCEPTION", "yolo")
-    if kind == "yolo":
-        try:
+    kind = os.getenv("PERCEPTION", "cashier")
+    try:
+        if kind == "cashier":
+            from src.detectors.cashier_perception import CashierPerception
+            return CashierPerception()
+        if kind == "yolo":
             from src.detectors.yolo_perception import YoloPerception
             return YoloPerception()
-        except ImportError:
-            print("[perception] ultralytics не установлен — использую заглушку")
+    except (ImportError, FileNotFoundError) as e:
+        print(f"[perception] {kind} недоступен ({e}) — использую заглушку")
     return NullPerception()
 
 
 def build_detectors() -> list[Detector]:
-    return [LeavingWorkplaceDetector(), PhoneDetector()]
+    from src.detectors.rules import CashAtNextClient, DepartureDetector, DoorLeftOpen, SafeLeftOpen
+    return [DepartureDetector(), CashAtNextClient(), SafeLeftOpen(), DoorLeftOpen()]
 
 
 def build_verifier() -> Verifier | None:
