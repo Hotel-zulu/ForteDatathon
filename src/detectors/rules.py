@@ -307,6 +307,7 @@ class NoMachineCheck(Detector):
 class ClientLeftEarly(Detector):
     """Клиент уходит (в комнате остаётся один), а деньги операции ещё лежат на столе/в счётчике."""
     type_id = "client_left_before_completion"
+    NEED_COUNTER = False   # требовать, чтобы деньги были в счётчике (строже, меньше ложных)
 
     def finalize(self, tl):
         if not tl:
@@ -318,7 +319,7 @@ class ClientLeftEarly(Detector):
                 continue   # клиент не ушёл до конца записи
             around = sc.frac("cash", b - 1.0, b + 2.0)
             in_ctr = any(_counting(sc, f) for f in sc.frames(b - 3.0, b + 1.0))
-            if around >= 0.5 and in_ctr:
+            if around >= 0.5 and (in_ctr or not self.NEED_COUNTER):
                 out.append(Candidate(self.type_id, a, b, t_peak=b, confidence=0.5,
                                      observed=f"Около {b:.1f} c клиент уходит от кассы, а наличные операции ещё "
                                               f"на столе/в счётчике — операция не завершена",

@@ -53,6 +53,23 @@ class Scene:
         self.counter = med_box(tl, {"banknote_counter"})
         raw = [sum(1 for q in f.persons if self.in_room(q)) for f in tl]
         self.count = self._smooth(raw)
+        self._stable = self._stabilize(tl)
+
+    # --- устойчивость во времени: предмет засчитывается, если виден в ≥2 из 5 соседних кадров ---
+    @staticmethod
+    def _stabilize(tl, half: int = 2, need: int = 2):
+        import os
+        per = [{} for _ in tl]
+        for i, f in enumerate(tl):
+            for o in f.objects:
+                per[i][o["cls"]] = max(per[i].get(o["cls"], 0.0), o["conf"])
+        if os.getenv("STABLE", "1") == "0":
+            return {id(f): per[i] for i, f in enumerate(tl)}
+        out = {}
+        for i, f in enumerate(tl):
+            win = per[max(0, i - half):i + half + 1]
+            out[id(f)] = {c: v for c, v in per[i].items() if sum(1 for w in win if c in w) >= need}
+        return out
 
     # --- люди ---
     def in_room(self, q: dict) -> bool:
@@ -77,9 +94,11 @@ class Scene:
         return out
 
     # --- объекты ---
-    @staticmethod
-    def has(f: FrameObs, cls: str, conf: float = 0.4) -> bool:
-        return any(o["cls"] == cls and o["conf"] >= conf for o in f.objects)
+    def has(self, f: FrameObs, cls: str, conf: float = 0.4) -> bool:
+        st = self._stable.get(id(f))
+        if st is None:   # кадр не из этого таймлайна
+            return any(o["cls"] == cls and o["conf"] >= conf for o in f.objects)
+        return st.get(cls, 0.0) >= conf
 
     def frames(self, t0: float, t1: float) -> list[FrameObs]:
         return [f for f in self.tl if t0 <= f.t <= t1]
