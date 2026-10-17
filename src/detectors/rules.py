@@ -84,20 +84,38 @@ class DepartureDetector(Detector):
 
     @staticmethod
     def _last_seated(sc: Scene, before: list[FrameObs], a: float) -> float:
-        """Последний момент, когда последний ушедший человек был на «своём» (сидячем) уровне."""
-        last = next((f for f in reversed(before) if sc.room_persons(f)), None)
-        if last is None:
+        """Последний момент, когда уходящий человек был на «своём» (сидячем) уровне.
+        Путь человека восстанавливается назад по кадрам по ближайшей рамке — не зависит от ID трекера."""
+        idx = next((i for i in range(len(before) - 1, -1, -1) if sc.room_persons(before[i])), None)
+        if idx is None:
             return max(sc.ts[0], a - 3)
-        q = max(sc.room_persons(last), key=lambda q: q["conf"])
-        tid = q.get("track_id")
-        path = [(f.t, p["xyxy"]) for f in before for p in f.persons if tid is not None and p.get("track_id") == tid]
+        cur = max(sc.room_persons(before[idx]), key=lambda q: q["conf"])["xyxy"]
+        path, miss = [(before[idx].t, cur)], 0
+        for f in reversed(before[:idx]):
+            ps = sc.room_persons(f)
+            if not ps:
+                miss += 1
+                if miss > 10:
+                    break
+                continue
+            c = ((cur[0] + cur[2]) / 2, (cur[1] + cur[3]) / 2)
+            q = min(ps, key=lambda q: (((q["xyxy"][0] + q["xyxy"][2]) / 2 - c[0]) ** 2 +
+                                       ((q["xyxy"][1] + q["xyxy"][3]) / 2 - c[1]) ** 2))
+            qc = ((q["xyxy"][0] + q["xyxy"][2]) / 2, (q["xyxy"][1] + q["xyxy"][3]) / 2)
+            if ((qc[0] - c[0]) ** 2 + (qc[1] - c[1]) ** 2) ** 0.5 > 0.12 * sc.scale:
+                miss += 1
+                if miss > 10:
+                    break
+                continue
+            miss, cur = 0, q["xyxy"]
+            path.append((f.t, cur))
+        path.reverse()
         if len(path) < 5:
             return max(sc.ts[0], a - 3)
         tops = np.array([b[1] for _, b in path])
         seat_top = np.percentile(tops, 80)
-        sit = [t for t, b in path if b[1] >= seat_top - 0.03]
+        sit = [t for t, b in path if b[1] >= seat_top - 0.03 * sc.scale]
         return sit[-1] if sit else path[0][0]
-
 
 class CashAtNextClient(Detector):
     type_id = "cash_left_unsecured"
