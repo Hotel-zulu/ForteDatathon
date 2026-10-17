@@ -19,7 +19,7 @@ def build_detectors() -> list[Detector]:
     """Все правила. Срабатывают только типы с enabled: true в configs/regulations.yaml."""
     from src.detectors import rules as R
     return [R.DepartureDetector(), R.CashAtNextClient(), R.SafeLeftOpen(), R.DoorLeftOpen(), R.NoIdentification(),
-            R.PersonalItems(), R.ThirdPerson(), R.NotCountedToSafe(), R.NoMachineCheck(), R.ClientLeftEarly()]
+            R.PersonalItems(), R.ThirdPerson(), R.NotCountedToSafe(), R.NoMachineCheck(), R.ClientLeftEarly(), R.CashLeftAfterHandover()]
 
 
 def build_verifier() -> Verifier | None:

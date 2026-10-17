@@ -326,3 +326,32 @@ class ClientLeftEarly(Detector):
                                      boxes=_box(sc.best("cash", b - 1, b + 2)[1], "cash"),
                                      evidence_ts=[round(b, 2), round(max(a, b - 2), 2)]))
         return out
+
+
+class CashLeftAfterHandover(Detector):
+    """Выдача прошла (клиент у кассы), а остаток наличных так и лежит на столе до конца записи / ухода клиента,
+    не убран в средство хранения и не в счётчике (X-1)."""
+    type_id = "cash_left_unsecured"
+    MIN_LEN, TAIL = 4.0, 1.0
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        out = []
+        for a, b in sc.visits(5.0):
+            # непрерывный отрезок «деньги на столе», доходящий до конца визита
+            runs = [r for r in segments(sc.ts, [sc.has(f, "cash") and not _counting(sc, f) for f in tl], self.MIN_LEN, 0.6)
+                    if r[1] >= b - self.TAIL and r[0] > a + 3.0]
+            if not runs:
+                continue
+            r0, r1 = runs[-1]
+            if any(sc.has(f, "safe_open") for f in sc.frames(r0, r1)):
+                continue   # кассир в это время убирал деньги в сейф
+            tp = r0 + 1.0
+            out.append(Candidate(self.type_id, r0, r1, t_peak=tp, confidence=0.55,
+                                 observed=f"С {r0:.1f} c после выдачи остаток наличных лежит на столе и до "
+                                          f"{r1:.1f} c не убран в средство хранения",
+                                 boxes=_box(sc.best("cash", r0, r1)[1], "cash"),
+                                 evidence_ts=[round(tp, 2), round((r0 + r1) / 2, 2)]))
+        return out
