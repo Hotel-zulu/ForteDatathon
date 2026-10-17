@@ -47,6 +47,11 @@ def start():
            "LABEL_STUDIO_USER_TOKEN": c["token"],
            "LABEL_STUDIO_BASE_DATA_DIR": str(ANN / ".ls_data"),
            "LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK": "true"}
+    public = os.getenv("LS_PUBLIC_URL")  # адрес туннеля (https://....trycloudflare.com), если есть
+    if public:
+        env.update({"LABEL_STUDIO_HOST": public, "CSRF_TRUSTED_ORIGINS": public,
+                    "LABEL_STUDIO_CSRF_TRUSTED_ORIGINS": public})
+        print(f"Публичный адрес: {public}")
     print(f"Label Studio: {URL}\nЛогин: {c['email']}\nПароль: {c['password']}")
     subprocess.run([str(LS_BIN), "start", "--port", URL.rsplit(":", 1)[-1], "--no-browser"], env=env, check=False)
 
