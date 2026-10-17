@@ -1,4 +1,4 @@
-"""Разметка Label Studio -> датасет для обучения детектора (формат YOLO).
+"""Разметка Label Studio -> датасет для обучения детектора (txt: класс cx cy w h — для scripts/train_rtdetr.py).
 
     python scripts/label_studio.py export objects
     python scripts/label_studio.py export zones

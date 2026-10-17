@@ -9,7 +9,7 @@
 Этап 2 — ОБЪЕКТЫ (~600–900 кадров):
     python scripts/annotation_prepare.py objects --zones-export annotation/zones/export.json
   -> annotation/objects/images/*.jpg + annotation/objects/tasks.json
-  Черновик уже содержит: рамки YOLO (телефон, ноутбук, сумки, стакан) и рамки неподвижных
+  Черновик уже содержит: рамки нашей модели RT-DETR и рамки неподвижных
   объектов, скопированные с этапа 1 (камера в ролике неподвижна). Людям остаётся
   добавить деньги/удостоверение/сумку инкассатора и поправить состояние сейфа/двери.
 """
@@ -54,14 +54,16 @@ def rect(label, x1, y1, x2, y2, w, h, rid, score=None):
 
 
 class Prelabeler:
-    def __init__(self, conf=0.3):
+    """Черновые рамки от нашей модели RT-DETR (Apache-2.0), если она уже обучена; иначе — без черновиков."""
+
+    def __init__(self, conf=0.35):
         try:
-            from ultralytics import YOLO
-            from src.detectors.yolo_perception import pick_device
-            self.model = YOLO(str(ROOT / "models" / "yolo11s.pt"))
-            self.device = pick_device()
+            import torch
+            from src.detectors.rtdetr_perception import _Det
+            dev = "mps" if torch.backends.mps.is_available() else "cpu"
+            self.model = _Det(str(ROOT / "models" / "rtdetr_cashier"), dev, 640)
         except Exception as e:  # noqa: BLE001
-            print(f"[prelabel] YOLO недоступен ({e}) — черновик без авторазметки")
+            print(f"[prelabel] модель недоступна ({e}) — черновик без авторазметки")
             self.model = None
         self.conf = conf
 
@@ -69,12 +71,8 @@ class Prelabeler:
         if self.model is None:
             return []
         h, w = img.shape[:2]
-        r = self.model.predict(img, imgsz=1280, conf=self.conf, device=self.device,
-                               classes=list(COCO_MAP), verbose=False)[0]
-        out = []
-        for i, (b, c, s) in enumerate(zip(r.boxes.xyxy.tolist(), r.boxes.cls.int().tolist(), r.boxes.conf.tolist())):
-            out.append(rect(COCO_MAP[c], *b, w, h, f"{prefix}_y{i}", s))
-        return out
+        return [rect(name, b[0] * w, b[1] * h, b[2] * w, b[3] * h, w, h, f"{prefix}_{i}", sc)
+                for i, (name, sc, b) in enumerate(self.model(img[:, :, ::-1].copy(), self.conf))]
 
 
 def videos():
@@ -103,7 +101,7 @@ def stage_zones(a):
         cv2.imwrite(str(p), img, [cv2.IMWRITE_JPEG_QUALITY, 92])
         pred = [x for x in pre(img, r.key) if x["value"]["rectanglelabels"][0] in STATIC]
         tasks.append({"data": {"image": ls_url(p), "video": r.key, "t": t},
-                      "predictions": [{"model_version": "yolo11s-coco", "result": pred}] if pred else []})
+                      "predictions": [{"model_version": "rtdetr-draft", "result": pred}] if pred else []})
         print(f"{r.key}: {len(pred)} авторамок")
     write_tasks(tasks, ANN / "zones" / "tasks.json")
 
@@ -155,7 +153,7 @@ def stage_objects(a):
                 result.append({"id": f"{prefix}_s{i}", "from_name": "box", "to_name": "image",
                                "type": "rectanglelabels", "original_width": w, "original_height": h,
                                "image_rotation": 0, "value": dict(v)})
-            if not static.get(r.key):  # нет зон — хотя бы ноутбук из YOLO
+            if not static.get(r.key):  # нет зон — хотя бы ноутбук из модели
                 result += [x for x in pre(img, prefix + "L") if x["value"]["rectanglelabels"][0] == "laptop"][:1]
             tasks.append({"data": {"image": ls_url(p), "video": r.key, "t": t, "near_violation": bool(dense)},
                           "predictions": [{"model_version": "draft", "result": result}]})

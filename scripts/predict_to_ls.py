@@ -1,7 +1,7 @@
-"""Черновики от ОБУЧЕННОЙ модели во все неразмеченные кадры «2. Объекты» (вместо OWLv2/YOLO-COCO).
+"""Черновики от ОБУЧЕННОЙ модели во все неразмеченные кадры «2. Объекты» (RT-DETR, Apache-2.0).
 
     python scripts/predict_to_ls.py --dry-run
-    python scripts/predict_to_ls.py                       # веса: models/detector/weights/best.pt
+    python scripts/predict_to_ls.py                       # модель: models/rtdetr_cashier
 
 Для каждого неразмеченного кадра:
   • неподвижные объекты (счётчик, ноутбук, сейф, дверь) — рамки с кадра зоны (точные);
@@ -31,18 +31,17 @@ MOVERS = {"cash", "id_card", "phone", "collector_bag", "personal_item", "food_dr
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default=str(ROOT / "models" / "detector" / "weights" / "best.pt"))
+    ap.add_argument("--weights", default=str(ROOT / "models" / "rtdetr_cashier"))
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--state-conf", type=float, default=0.45, help="уверенность для open/closed сейфа и двери")
     ap.add_argument("--version", default="model-v1")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
-    from ultralytics import YOLO
     import torch
+    from src.detectors.rtdetr_perception import _Det
     dev = "mps" if torch.backends.mps.is_available() else "cpu"
-    model = YOLO(a.weights)
-    names = model.names
+    model = _Det(a.weights, dev, 640)
     zones, glass = load_zones(), load_glass()
     zone_sig = {v: [crop_sig(Image.open(z["image"]).convert("RGB"), r) for r in z["rects"]] for v, z in zones.items()}
 
@@ -54,9 +53,8 @@ def main():
         vid = t["data"].get("video")
         img = Image.open(ROOT / t["data"]["image"].split("d=")[-1]).convert("RGB")
         W, H = img.size
-        r = model.predict(np.asarray(img)[:, :, ::-1], imgsz=960, conf=a.conf, device=dev, verbose=False)[0]
-        dets = [{"cls": names[c], "score": s, "box": tuple(b)}
-                for b, c, s in zip(r.boxes.xyxy.tolist(), r.boxes.cls.int().tolist(), r.boxes.conf.tolist())]
+        dets = [{"cls": n, "score": sc, "box": (b[0] * W, b[1] * H, b[2] * W, b[3] * H)}
+                for n, sc, b in model(np.asarray(img), a.conf)]
         # без отражений
         dets = [d for d in dets if not any(inside((100 * (d["box"][0] + d["box"][2]) / 2 / W,
                                                    100 * (d["box"][1] + d["box"][3]) / 2 / H), p)

@@ -9,7 +9,7 @@
   2. Сравнивает участки сейфа и двери с кадром зоны. Если картинка заметно изменилась —
      помечает кадр `check` = «сейф» / «дверь» (фильтр в Data Manager), а для сейфа ставит
      safe_open, если OWLv2 видит там открытую дверцу.
-  3. Добавляет черновики OWLv2 (деньги, удостоверение, телефон, сумки, еда) и YOLO (телефон, стакан),
+  3. Добавляет черновики OWLv2 (деньги, удостоверение, телефон, сумки, еда),
      отбрасывая всё, что попало в полигон стекла (отражения).
   Старые черновики заменяются одним новым набором «draft-v2».
 """
@@ -56,22 +56,6 @@ def crop_sig(img: Image.Image, v: dict) -> np.ndarray:
 def changed(a: np.ndarray, b: np.ndarray, thr: float) -> tuple[bool, float]:
     d = float(np.abs(a - b).mean())
     return d > thr, d
-
-
-def yolo_dets(img):
-    try:
-        from ultralytics import YOLO
-        from src.detectors.yolo_perception import pick_device
-    except ImportError:
-        return []
-    global _Y
-    if "_Y" not in globals():
-        _Y = (YOLO(str(ROOT / "models" / "yolo11s.pt")), pick_device())
-    m, dev = _Y
-    r = m.predict(np.asarray(img)[:, :, ::-1], imgsz=1280, conf=0.35, classes=[67], device=dev, verbose=False)[0]
-    names = {67: "phone"}  # стакан/бутылку не ищем: давали ложные срабатывания на деньгах
-    return [{"cls": names[c], "score": s, "box": tuple(b)}
-            for b, c, s in zip(r.boxes.xyxy.tolist(), r.boxes.cls.int().tolist(), r.boxes.conf.tolist())]
 
 
 def all_tasks(pid):
@@ -138,11 +122,8 @@ def main():
         if vid not in zones:
             stats["нет зоны для видео"] += 1
 
-        # 3. подвижные объекты: OWLv2 + YOLO (без дублей)
+        # 3. подвижные объекты: OWLv2
         movers = [d for d in dets if d["cls"] != "safe_open"]
-        for y in refine(yolo_dets(img), img, vid, glass):
-            if all(iou(y["box"], m["box"]) < 0.4 for m in movers):
-                movers.append(y)
         for j, d in enumerate(movers):
             x1, y1, x2, y2 = d["box"]
             result.append({"id": f"m{t['id']}_{j}", "from_name": "box", "to_name": "image", "type": "rectanglelabels",

@@ -87,9 +87,9 @@ def _run(job_id: str, video: Path):
 @app.get("/health")
 def health():
     import os
-    w = Path(os.getenv("DETECTOR_WEIGHTS", str(config.MODELS_DIR / "detector" / "weights" / "best.pt")))
-    return {"status": "ok", "engine": os.getenv("PERCEPTION", "cashier"), "local": True,
-            "detector": w.parent.parent.name if w.exists() else None, "queue": len(_progress)}
+    w = Path(os.getenv("RTDETR_WEIGHTS", str(config.MODELS_DIR / "rtdetr_cashier")))
+    return {"status": "ok", "engine": os.getenv("PERCEPTION", "rtdetr"), "local": True,
+            "detector": "RT-DETRv2 (Apache-2.0)" if (w / "config.json").exists() else None, "queue": len(_progress)}
 
 
 # ---------------- эндпоинты жюри ----------------

@@ -27,8 +27,8 @@ def main():
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--fps", type=float, default=config.SAMPLE_FPS)
     a = ap.parse_args()
-    from src.detectors.cashier_perception import CashierPerception
-    per = CashierPerception()
+    from src.detectors import build_perception
+    per = build_perception()
     out = config.WORKDIR / "timelines"
     out.mkdir(parents=True, exist_ok=True)
     vids = sorted(config.VIDEOS_DIR.glob("*.mov"), key=lambda p: int(norm_name(p.stem).split("-")[1]))

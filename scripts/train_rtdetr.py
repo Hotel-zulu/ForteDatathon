@@ -1,6 +1,6 @@
-"""Обучение детектора RT-DETRv2 (Apache-2.0) на нашей разметке — замена YOLO (AGPL) для финальной сдачи.
+"""Обучение детектора RT-DETRv2 (Apache-2.0) на нашей разметке — единственный детектор сервиса.
 
-    python scripts/build_dataset.py --val X-3 X-10 X-33 X-39     # тот же датасет, что для YOLO
+    python scripts/build_dataset.py --val X-3 X-10 X-33 X-39     # txt-разметка: cls cx cy w h
     python scripts/train_rtdetr.py --epochs 40                    # ~3–4 ч на M4 (MPS)
     python scripts/train_rtdetr.py --epochs 1 --limit 32          # проверка, что всё запускается
 
@@ -41,7 +41,7 @@ def read_names():
     return [names[i] for i in sorted(names)]
 
 
-class YoloDS(torch.utils.data.Dataset):
+class LabelDS(torch.utils.data.Dataset):
     def __init__(self, split, train, limit=None, size=800):
         self.imgs = sorted((DS / "images" / split).glob("*.jpg"))[:limit]
         self.train, self.size = train, size
@@ -167,8 +167,8 @@ def main():
     model = RTDetrV2ForObjectDetection.from_pretrained(
         BASE, num_labels=len(names), id2label=dict(enumerate(names)), label2id={n: i for i, n in enumerate(names)},
         ignore_mismatched_sizes=True).to(dev)
-    tr = YoloDS("train", True, a.limit, a.size)
-    va = YoloDS("val", False, a.limit, a.size)
+    tr = LabelDS("train", True, a.limit, a.size)
+    va = LabelDS("val", False, a.limit, a.size)
     dl = torch.utils.data.DataLoader(tr, batch_size=a.batch, shuffle=True, collate_fn=collate, num_workers=2, persistent_workers=True)
     dv = torch.utils.data.DataLoader(va, batch_size=a.batch, collate_fn=collate, num_workers=2)
     bb = [p for n, p in model.named_parameters() if "backbone" in n]

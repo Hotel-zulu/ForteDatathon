@@ -4,8 +4,7 @@
   • люди — исходная COCO-модель models/rtdetr_v2_r18vd (класс person);
   • трекинг — жадное сопоставление по IoU (свой код, без ByteTrack/ultralytics).
 
-Включается: PERCEPTION=rtdetr. Выход тот же, что у CashierPerception (FrameObs + пиксельные признаки),
-поэтому правила не меняются.
+Это единственный детектор сервиса (YOLO/ultralytics — AGPL — удалены из проекта).
 """
 from __future__ import annotations
 
@@ -17,7 +16,7 @@ import torch  # noqa: E402
 
 from src.config import MODELS_DIR  # noqa: E402
 from src.detectors.base import FrameObs, Perception  # noqa: E402
-from src.detectors.cashier_perception import CashierPerception  # noqa: E402
+from src.detectors.pixels import PixelFeatures  # noqa: E402
 
 
 def _iou(a, b):
@@ -58,10 +57,10 @@ class _Det:
         self.model = RTDetrV2ForObjectDetection.from_pretrained(path).to(dev).eval()
         self.names = self.model.config.id2label
         self.dev, self.size = dev, size
-        self.mean = torch.tensor([0, 0, 0]).view(3, 1, 1)   # RT-DETR: только /255, без нормировки
 
     @torch.no_grad()
     def __call__(self, rgb: np.ndarray, conf: float, keep=None):
+        # RT-DETR: квадрат size×size, только /255 без нормировки — как в scripts/train_rtdetr.py
         x = torch.from_numpy(rgb).permute(2, 0, 1).float().unsqueeze(0) / 255.0
         x = torch.nn.functional.interpolate(x, size=(self.size, self.size), mode="bilinear", antialias=True)
         o = self.model(pixel_values=x.to(self.dev))
@@ -88,7 +87,7 @@ def _nms(dets, thr=0.6):
     return keep
 
 
-class RTDetrPerception(CashierPerception):
+class RTDetrPerception(PixelFeatures, Perception):
     def __init__(self, conf: float = 0.3, size: int = 640):
         dev = os.getenv("DEVICE") or ("mps" if torch.backends.mps.is_available() else
                                       "cuda" if torch.cuda.is_available() else "cpu")
@@ -106,10 +105,10 @@ class RTDetrPerception(CashierPerception):
         ppl = self.ppl(rgb, 0.35, keep={"person"})
         for (name, sc, b), tid in zip(ppl, self.tracker(t, [p[2] for p in ppl])):
             obs.persons.append({"track_id": tid, "xyxy": b, "conf": round(sc, 3), "role": "unknown"})
-        self._pixels(frame, obs)
+        self.add_pixels(frame, obs)
         return obs
 
     def reset(self):
-        self._lap = self._door = None
+        self.reset_pixels()
         if hasattr(self, "tracker"):
             self.tracker.reset()

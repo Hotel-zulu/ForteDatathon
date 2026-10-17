@@ -22,8 +22,8 @@ make tunnel                       # публичный URL через cloudflare
 git clone https://github.com/Hotel-zulu/ForteDatathon.git && cd ForteDatathon
 # положить данные организаторов: open/videos/*.mov и open/open_labels.xlsx
 bash setup.sh && source .venv/bin/activate
-pip install -r requirements-ml.txt          # torch + ultralytics (долго при медленном интернете)
-curl -L -o models/yolo11s.pt https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt
+pip install -r requirements-ml.txt          # torch + transformers (всё Apache-2.0 / BSD)
+python -c "from huggingface_hub import snapshot_download as d; d('PekingU/rtdetr_v2_r18vd', local_dir='models/rtdetr_v2_r18vd')"
 ```
 
 Правила:

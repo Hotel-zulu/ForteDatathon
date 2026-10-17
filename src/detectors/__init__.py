@@ -4,24 +4,14 @@ from src.detectors.examples import NullPerception
 
 
 def build_perception() -> Perception:
-    """PERCEPTION=cashier (по умолчанию: наша модель + люди) | yolo (только COCO) | null.
-
-    TODO к финалу: Apache-2.0 детектор (RT-DETR / D-FINE). Веса — в models/, офлайн.
-    """
+    """PERCEPTION=rtdetr (по умолчанию: RT-DETRv2, Apache-2.0) | null (заглушка для проверки сервиса)."""
     import os
-    kind = os.getenv("PERCEPTION", "cashier")
-    try:
-        if kind == "cashier":
-            from src.detectors.cashier_perception import CashierPerception
-            return CashierPerception()
-        if kind == "rtdetr":   # Apache-2.0, без ultralytics — для финальной сдачи
+    if os.getenv("PERCEPTION", "rtdetr") == "rtdetr":
+        try:
             from src.detectors.rtdetr_perception import RTDetrPerception
             return RTDetrPerception()
-        if kind == "yolo":
-            from src.detectors.yolo_perception import YoloPerception
-            return YoloPerception()
-    except (ImportError, FileNotFoundError) as e:
-        print(f"[perception] {kind} недоступен ({e}) — использую заглушку")
+        except (ImportError, OSError) as e:
+            print(f"[perception] RT-DETR недоступен ({e}) — использую заглушку")
     return NullPerception()
 
 

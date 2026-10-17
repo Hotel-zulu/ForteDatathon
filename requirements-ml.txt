@@ -1,13 +1,9 @@
-# Модели (ставить по мере выбора подхода). ПРОВЕРЯЙТЕ ЛИЦЕНЗИЮ каждой модели/весов!
-# ⚠ ultralytics (YOLOv8/11) — AGPL-3.0: для исследования ОК, к финалу заменить на Apache-2.0 / MIT.
-ultralytics>=8.3
-lap>=0.5
-torch>=2.2
-torchvision>=0.17
-transformers>=4.45       # RT-DETR / D-FINE / Grounding DINO / VLM (Apache-2.0)
-accelerate>=0.30
-supervision>=0.20        # ByteTrack, зоны, отрисовка (MIT)
-onnxruntime>=1.17        # быстрый CPU/GPU-инференс экспортированных моделей
-# rtmlib                 # RTMPose без mmcv (Apache-2.0) — поза/руки
-# qwen-vl-utils          # если берёте Qwen-VL как верификатор (сверить лицензию весов!)
-jupyterlab>=4.1
+# Модели. ТОЛЬКО лицензии для коммерческого использования (FAQ п.24): Apache-2.0 / MIT / BSD.
+# YOLO / ultralytics (AGPL-3.0) из проекта удалены — не добавлять.
+torch>=2.2               # BSD
+torchvision>=0.17        # BSD
+transformers>=4.45       # Apache-2.0: RT-DETRv2 (детектор), OWLv2 (черновики разметки)
+safetensors>=0.4         # Apache-2.0
+huggingface_hub>=0.23    # Apache-2.0: один раз скачать веса в models/
+# Веса: PekingU/rtdetr_v2_r18vd (Apache-2.0) -> models/rtdetr_v2_r18vd
+#       наша дообученная модель -> models/rtdetr_cashier (scripts/train_rtdetr.py)

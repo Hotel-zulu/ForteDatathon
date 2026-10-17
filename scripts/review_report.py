@@ -1,7 +1,7 @@
 """Обзорный отчёт для команды: «что происходит в роликах».
 
     python scripts/review_report.py              # все 42 видео
-    python scripts/review_report.py --no-yolo    # без детекции (быстрее)
+    python scripts/review_report.py --no-model   # без детекции (быстрее)
     python scripts/review_report.py --only X-1 X-2
 
 Результат:
@@ -11,7 +11,7 @@
 
 Для роликов с нарушением: 9 кадров вокруг метки (t-4 ... t+4 c) + обзор всего ролика.
 Для роликов без нарушения: 9 кадров равномерно по ролику.
-На кадрах рамки YOLO: люди (зелёные), телефон (красный), сумки (оранжевые) и т.п.
+На кадрах рамки модели RT-DETR: люди (зелёные), объекты кассы.
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def draw(img, obs):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*")
-    ap.add_argument("--no-yolo", action="store_true")
+    ap.add_argument("--no-model", action="store_true")
     ap.add_argument("--window", type=float, default=4.0, help="± секунд вокруг метки")
     ap.add_argument("--n", type=int, default=9, help="кадров в раскадровке")
     a = ap.parse_args()
@@ -63,10 +63,9 @@ def main():
     labels = labels.assign(_n=labels.key.str.extract(r"(\d+)")[0].astype(int)).sort_values("_n")
 
     perception = None
-    if not a.no_yolo:
-        from src.detectors.yolo_perception import YoloPerception
-        perception = YoloPerception(track=False)
-        print(f"YOLO на устройстве: {perception.device}")
+    if not a.no_model:
+        from src.detectors.rtdetr_perception import RTDetrPerception
+        perception = RTDetrPerception()
 
     rows, blocks = [], []
     for r in labels.itertuples():
@@ -131,7 +130,7 @@ def main():
     .b{font-size:12px;padding:2px 8px;border-radius:10px;margin-left:6px}.bad{background:#fdecee;color:#b4122b}.ok{background:#e7f6ec;color:#127a3d}"""
     (out / "index.html").write_text(
         f"<!doctype html><meta charset=utf-8><title>Обзор роликов</title><style>{css}</style><main>"
-        f"<h1>Обзор роликов датасета</h1><p>Зелёные рамки — люди, красные — телефон, оранжевые — сумки (YOLO COCO). "
+        f"<h1>Обзор роликов датасета</h1><p>Зелёные рамки — люди, красные — телефон, оранжевые — сумки (модель RT-DETR). "
         f"Красная обводка — кадр метки нарушения. Клик по кадру открывает его крупно.</p>{table}{''.join(blocks)}</main>",
         encoding="utf-8")
     print(f"\nОтчёт: {out / 'index.html'}\nТаблица: {out / 'summary.csv'}")
