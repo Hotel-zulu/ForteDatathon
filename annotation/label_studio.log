@@ -1,0 +1,137 @@
+=> Database and media directory: /Users/islamsarsengali/Desktop/forte-hackathon-starter/annotation/.ls_data
+=> Static URL is set to: /static/
+=> Database and media directory: /Users/islamsarsengali/Desktop/forte-hackathon-starter/annotation/.ls_data
+=> Static URL is set to: /static/
+/Users/islamsarsengali/Desktop/forte-hackathon-starter/annotation/.ls_data/.env not found - if you're not configuring your environment separately, check this.
+get 'SECRET_KEY' casted as '<class 'str'>' with default ''
+Warning: SECRET_KEY not found in environment variables. Will generate a random key.
+Starting new HTTPS connection (1): pypi.org:443
+https://pypi.org:443 "GET /pypi/label-studio/json HTTP/1.1" 200 41138
+/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/django/db/backends/utils.py:98: RuntimeWarning: Accessing the database during app initialization is discouraged. To fix this warning, avoid executing queries in AppConfig.ready() or when your app modules are imported.
+  warnings.warn(self.APPS_NOT_READY_WARNING_MSG, category=RuntimeWarning)
+[2026-10-17 09:34:19,147] [django.server::log_message::213] [INFO] "GET /health HTTP/1.1" 200 16
+[2026-10-17 09:34:19,147] [django.server::log_message::213] [INFO] "GET /health HTTP/1.1" 200 16
+[2026-10-17 09:34:19,157] [django.server::log_message::213] [INFO] "GET /health HTTP/1.1" 200 16
+[2026-10-17 09:34:19,157] [django.server::log_message::213] [INFO] "GET /health HTTP/1.1" 200 16
+[2026-10-17 09:34:24,915] [core.utils.common::custom_exception_handler::97] [ERROR] ff707c20-596d-4c78-8889-a7661b331dda Authentication token no longer valid: legacy token authentication has been disabled for this organization
+Traceback (most recent call last):
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/sentry_sdk/integrations/django/__init__.py", line 366, in sentry_patched_drf_initial
+    return old_drf_initial(self, request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/views.py", line 420, in initial
+    self.perform_authentication(request)
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/views.py", line 330, in perform_authentication
+    request.user
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/request.py", line 232, in user
+    self._authenticate()
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/sentry_sdk/integrations/django/__init__.py", line 403, in sentry_patched_drf_authenticate
+    return old_drf_authenticate(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/request.py", line 389, in _authenticate
+    user_auth_tuple = authenticator.authenticate(self)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/label_studio/jwt_auth/auth.py", line 35, in authenticate
+    raise AuthenticationFailed(
+rest_framework.exceptions.AuthenticationFailed: Authentication token no longer valid: legacy token authentication has been disabled for this organization
+[2026-10-17 09:34:24,917] [django.request::log_response::253] [WARNING] Unauthorized: /api/projects/
+[2026-10-17 09:34:24,917] [django.request::log_response::253] [WARNING] Unauthorized: /api/projects/
+[2026-10-17 09:34:24,917] [django.server::log_message::213] [WARNING] "GET /api/projects?page_size=100 HTTP/1.1" 401 215
+[2026-10-17 09:34:24,917] [django.server::log_message::213] [WARNING] "GET /api/projects?page_size=100 HTTP/1.1" 401 215
+[2026-10-17 09:34:38,642] [core.utils.common::custom_exception_handler::97] [ERROR] a5b2777f-3068-4af0-a883-ac4f3ea0be8a Authentication token no longer valid: legacy token authentication has been disabled for this organization
+Traceback (most recent call last):
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/sentry_sdk/integrations/django/__init__.py", line 366, in sentry_patched_drf_initial
+    return old_drf_initial(self, request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/views.py", line 420, in initial
+    self.perform_authentication(request)
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/views.py", line 330, in perform_authentication
+    request.user
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/request.py", line 232, in user
+    self._authenticate()
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/sentry_sdk/integrations/django/__init__.py", line 403, in sentry_patched_drf_authenticate
+    return old_drf_authenticate(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/rest_framework/request.py", line 389, in _authenticate
+    user_auth_tuple = authenticator.authenticate(self)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/islamsarsengali/label-studio-venv/lib/python3.11/site-packages/label_studio/jwt_auth/auth.py", line 35, in authenticate
+    raise AuthenticationFailed(
+rest_framework.exceptions.AuthenticationFailed: Authentication token no longer valid: legacy token authentication has been disabled for this organization
+[2026-10-17 09:34:38,643] [django.request::log_response::253] [WARNING] Unauthorized: /api/projects/
+[2026-10-17 09:34:38,643] [django.request::log_response::253] [WARNING] Unauthorized: /api/projects/
+[2026-10-17 09:34:38,644] [django.server::log_message::213] [WARNING] "GET /api/projects?page_size=100 HTTP/1.1" 401 215
+[2026-10-17 09:34:38,644] [django.server::log_message::213] [WARNING] "GET /api/projects?page_size=100 HTTP/1.1" 401 215
+[2026-10-17 09:35:03,571] [django.server::log_message::213] [INFO] "GET /user/login/ HTTP/1.1" 200 27321
+[2026-10-17 09:35:03,571] [django.server::log_message::213] [INFO] "GET /user/login/ HTTP/1.1" 200 27321
+[2026-10-17 09:35:03,656] [django.server::log_message::213] [INFO] "POST /user/login/ HTTP/1.1" 302 0
+[2026-10-17 09:35:03,656] [django.server::log_message::213] [INFO] "POST /user/login/ HTTP/1.1" 302 0
+[2026-10-17 09:35:03,728] [django.server::log_message::213] [INFO] "GET / HTTP/1.1" 200 38932
+[2026-10-17 09:35:03,728] [django.server::log_message::213] [INFO] "GET / HTTP/1.1" 200 38932
+[2026-10-17 09:35:03,737] [django.server::log_message::213] [INFO] "GET /api/projects?page_size=100 HTTP/1.1" 200 52
+[2026-10-17 09:35:03,737] [django.server::log_message::213] [INFO] "GET /api/projects?page_size=100 HTTP/1.1" 200 52
+[2026-10-17 09:35:03,751] [django.server::log_message::213] [INFO] "POST /api/projects HTTP/1.1" 201 3741
+[2026-10-17 09:35:03,751] [django.server::log_message::213] [INFO] "POST /api/projects HTTP/1.1" 201 3741
+[2026-10-17 09:35:03,760] [django.server::log_message::213] [INFO] "POST /api/storages/localfiles HTTP/1.1" 201 417
+[2026-10-17 09:35:03,760] [django.server::log_message::213] [INFO] "POST /api/storages/localfiles HTTP/1.1" 201 417
+[2026-10-17 09:35:03,785] [django.server::log_message::213] [INFO] "POST /api/projects/1/import HTTP/1.1" 201 178
+[2026-10-17 09:35:03,785] [django.server::log_message::213] [INFO] "POST /api/projects/1/import HTTP/1.1" 201 178
+[2026-10-17 09:35:03,838] [django.server::log_message::213] [INFO] "GET /user/login/ HTTP/1.1" 200 27321
+[2026-10-17 09:35:03,838] [django.server::log_message::213] [INFO] "GET /user/login/ HTTP/1.1" 200 27321
+[2026-10-17 09:35:03,914] [django.server::log_message::213] [INFO] "POST /user/login/ HTTP/1.1" 302 0
+[2026-10-17 09:35:03,914] [django.server::log_message::213] [INFO] "POST /user/login/ HTTP/1.1" 302 0
+[2026-10-17 09:35:03,918] [django.server::log_message::213] [INFO] "GET / HTTP/1.1" 200 38932
+[2026-10-17 09:35:03,918] [django.server::log_message::213] [INFO] "GET / HTTP/1.1" 200 38932
+[2026-10-17 09:35:03,928] [django.server::log_message::213] [INFO] "GET /api/projects?page_size=100 HTTP/1.1" 200 3784
+[2026-10-17 09:35:03,928] [django.server::log_message::213] [INFO] "GET /api/projects?page_size=100 HTTP/1.1" 200 3784
+[2026-10-17 09:35:03,942] [django.server::log_message::213] [INFO] "POST /api/projects HTTP/1.1" 201 3935
+[2026-10-17 09:35:03,942] [django.server::log_message::213] [INFO] "POST /api/projects HTTP/1.1" 201 3935
+[2026-10-17 09:35:03,950] [django.server::log_message::213] [INFO] "POST /api/storages/localfiles HTTP/1.1" 201 421
+[2026-10-17 09:35:03,950] [django.server::log_message::213] [INFO] "POST /api/storages/localfiles HTTP/1.1" 201 421
+[2026-10-17 09:35:04,024] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 179
+[2026-10-17 09:35:04,024] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 179
+[2026-10-17 09:35:04,094] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 179
+[2026-10-17 09:35:04,094] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 179
+[2026-10-17 09:35:04,161] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 179
+[2026-10-17 09:35:04,161] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 179
+[2026-10-17 09:35:04,225] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 180
+[2026-10-17 09:35:04,225] [django.server::log_message::213] [INFO] "POST /api/projects/2/import HTTP/1.1" 201 180
+[2026-10-17 09:35:12,211] [django.server::log_message::213] [INFO] "GET /user/login/ HTTP/1.1" 200 27321
+[2026-10-17 09:35:12,211] [django.server::log_message::213] [INFO] "GET /user/login/ HTTP/1.1" 200 27321
+[2026-10-17 09:35:12,285] [django.server::log_message::213] [INFO] "POST /user/login/ HTTP/1.1" 302 0
+[2026-10-17 09:35:12,285] [django.server::log_message::213] [INFO] "POST /user/login/ HTTP/1.1" 302 0
+[2026-10-17 09:35:12,289] [django.server::log_message::213] [INFO] "GET / HTTP/1.1" 200 38932
+[2026-10-17 09:35:12,289] [django.server::log_message::213] [INFO] "GET / HTTP/1.1" 200 38932
+[2026-10-17 09:35:12,303] [django.server::log_message::213] [INFO] "GET /api/tasks?project=1&page_size=1 HTTP/1.1" 200 681
+[2026-10-17 09:35:12,303] [django.server::log_message::213] [INFO] "GET /api/tasks?project=1&page_size=1 HTTP/1.1" 200 681
+[2026-10-17 09:35:12,308] [django.server::log_message::213] [INFO] "GET /data/local-files/?d=annotation/zones/images/X-1.jpg HTTP/1.1" 200 75496
+[2026-10-17 09:35:12,308] [django.server::log_message::213] [INFO] "GET /data/local-files/?d=annotation/zones/images/X-1.jpg HTTP/1.1" 200 75496
+[2026-10-17 09:35:12,679] [django.server::log_message::213] [INFO] "GET /projects/ HTTP/1.1" 302 0
+[2026-10-17 09:35:12,679] [django.server::log_message::213] [INFO] "GET /projects/ HTTP/1.1" 302 0
+[2026-10-17 09:35:12,693] [django.server::log_message::213] [INFO] "GET /user/login/?next=/projects/ HTTP/1.1" 200 27330
+[2026-10-17 09:35:12,693] [django.server::log_message::213] [INFO] "GET /user/login/?next=/projects/ HTTP/1.1" 200 27330
+[2026-10-17 09:35:12,746] [django.server::log_message::213] [INFO] "GET /static/css/main.9be72da65a79.css HTTP/1.1" 200 28897
+[2026-10-17 09:35:12,746] [django.server::log_message::213] [INFO] "GET /static/css/main.9be72da65a79.css HTTP/1.1" 200 28897
+[2026-10-17 09:35:12,751] [django.server::log_message::213] [INFO] "GET /react-app/main.css?v=df96d7 HTTP/1.1" 200 232558
+[2026-10-17 09:35:12,751] [django.server::log_message::213] [INFO] "GET /react-app/main.css?v=df96d7 HTTP/1.1" 200 232558
+[2026-10-17 09:35:12,752] [django.server::log_message::213] [INFO] "GET /static/css/login.f115716e9a7c.css HTTP/1.1" 200 7369
+[2026-10-17 09:35:12,752] [django.server::log_message::213] [INFO] "GET /static/css/login.f115716e9a7c.css HTTP/1.1" 200 7369
+[2026-10-17 09:35:12,752] [django.server::log_message::213] [INFO] "GET /static/css/fonts.hellix.ad84997f14b9.css HTTP/1.1" 200 366
+[2026-10-17 09:35:12,752] [django.server::log_message::213] [INFO] "GET /static/css/fonts.hellix.ad84997f14b9.css HTTP/1.1" 200 366
+[2026-10-17 09:35:12,770] [django.server::log_message::213] [INFO] "GET /static/fonts/Hellix-Regular.ce7e7fc9354f.woff HTTP/1.1" 200 51972
+[2026-10-17 09:35:12,770] [django.server::log_message::213] [INFO] "GET /static/fonts/Hellix-Regular.ce7e7fc9354f.woff HTTP/1.1" 200 51972
+[2026-10-17 09:35:12,770] [django.server::log_message::213] [INFO] "GET /static/fonts/Figtree-Regular.ttf HTTP/1.1" 200 40584
+[2026-10-17 09:35:12,770] [django.server::log_message::213] [INFO] "GET /static/fonts/Figtree-Regular.ttf HTTP/1.1" 200 40584
+[2026-10-17 09:35:12,770] [django.server::log_message::213] [INFO] "GET /static/fonts/Hellix-SemiBold.656fff162b3b.woff HTTP/1.1" 200 52680
+[2026-10-17 09:35:12,770] [django.server::log_message::213] [INFO] "GET /static/fonts/Hellix-SemiBold.656fff162b3b.woff HTTP/1.1" 200 52680
+[2026-10-17 09:35:12,774] [django.server::log_message::213] [INFO] "GET /static/images/heidi-tip.2e3228516929.svg HTTP/1.1" 200 39408
+[2026-10-17 09:35:12,774] [django.server::log_message::213] [INFO] "GET /static/images/heidi-tip.2e3228516929.svg HTTP/1.1" 200 39408
+[2026-10-17 09:35:12,778] [django.server::log_message::213] [INFO] "GET /static/images/login-bg.2c7fadf7bd88.svg HTTP/1.1" 200 529
+[2026-10-17 09:35:12,778] [django.server::log_message::213] [INFO] "GET /static/images/login-bg.2c7fadf7bd88.svg HTTP/1.1" 200 529
+[2026-10-17 09:35:20,237] [django.server::log_message::213] [INFO] "GET /heidi-tips HTTP/1.1" 200 10362
+[2026-10-17 09:35:20,237] [django.server::log_message::213] [INFO] "GET /heidi-tips HTTP/1.1" 200 10362
+[2026-10-17 09:35:20,874] [django.server::log_message::213] [INFO] "GET /static/images/favicon.8992b8aa4126.ico HTTP/1.1" 200 15406
+[2026-10-17 09:35:20,874] [django.server::log_message::213] [INFO] "GET /static/images/favicon.8992b8aa4126.ico HTTP/1.1" 200 15406

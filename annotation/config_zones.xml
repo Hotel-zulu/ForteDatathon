@@ -1,0 +1,17 @@
+<View>
+  <Header value="ЗОНЫ: один кадр на видео. Полигоны — пол/стекло/стол. Прямоугольники — неподвижные объекты."/>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <PolygonLabels name="zone" toName="image" strokeWidth="2" opacity="0.25">
+    <Label value="floor" background="#2e7d32" hotkey="f"/>
+    <Label value="glass_wall" background="#0288d1" hotkey="g"/>
+    <Label value="desk" background="#8d6e63" hotkey="d"/>
+  </PolygonLabels>
+  <RectangleLabels name="box" toName="image" strokeWidth="2">
+    <Label value="banknote_counter" background="#6a1b9a" hotkey="1"/>
+    <Label value="laptop" background="#1565c0" hotkey="2"/>
+    <Label value="safe_closed" background="#757575" hotkey="3"/>
+    <Label value="safe_open" background="#e53935" hotkey="4"/>
+    <Label value="door_closed" background="#00897b" hotkey="5"/>
+    <Label value="door_open" background="#fb8c00" hotkey="6"/>
+  </RectangleLabels>
+</View>

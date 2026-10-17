@@ -27,3 +27,10 @@ models/*
 .DS_Store
 .vscode/
 .idea/
+
+# Разметка: кадры и данные Label Studio не коммитим (данные организаторов), конфиги и README — да
+annotation/*/images/
+annotation/*/tasks.json
+annotation/*/export.json
+annotation/.ls_data/
+annotation/.ls_credentials

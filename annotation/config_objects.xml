@@ -1,0 +1,18 @@
+<View>
+  <Header value="ОБЪЕКТЫ: рамки вокруг всех объектов списка. Отражения в стекле НЕ размечать."/>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <RectangleLabels name="box" toName="image" strokeWidth="2">
+    <Label value="cash" background="#43a047" hotkey="1"/>
+    <Label value="id_card" background="#fdd835" hotkey="2"/>
+    <Label value="phone" background="#e53935" hotkey="3"/>
+    <Label value="banknote_counter" background="#6a1b9a" hotkey="4"/>
+    <Label value="laptop" background="#1565c0" hotkey="5"/>
+    <Label value="safe_closed" background="#757575" hotkey="6"/>
+    <Label value="safe_open" background="#d81b60" hotkey="7"/>
+    <Label value="door_closed" background="#00897b" hotkey="8"/>
+    <Label value="door_open" background="#fb8c00" hotkey="9"/>
+    <Label value="collector_bag" background="#9ccc65" hotkey="q"/>
+    <Label value="personal_item" background="#8d6e63" hotkey="w"/>
+    <Label value="food_drink" background="#ff7043" hotkey="e"/>
+  </RectangleLabels>
+</View>
