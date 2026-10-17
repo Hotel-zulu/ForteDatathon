@@ -40,6 +40,17 @@ def _dedup(cands: list[Candidate], gap: float = 3.0) -> list[Candidate]:
     return sorted(out, key=lambda c: c.t_peak)
 
 
+def _evidence(video_path, c):
+    """1–3 кадра; если отрисовка рамок упала — хотя бы кадр на таймкоде (формат ТЗ требует ≥1)."""
+    try:
+        ev = make_evidence(video_path, c.evidence_ts or [c.t_peak], c.boxes, blur=config.BLUR_FACES)
+        if ev:
+            return ev
+    except Exception as e:  # noqa: BLE001
+        print(f"[pipeline] кадры-доказательства: {e}")
+    return make_evidence(video_path, [c.t_peak], [], blur=config.BLUR_FACES)
+
+
 def analyze(video_path: str | Path, with_frames: bool = True, progress=None) -> dict:
     t0 = time.time()
     video_path = str(video_path)
@@ -68,7 +79,12 @@ def analyze(video_path: str | Path, with_frames: bool = True, progress=None) -> 
 
     # 2. Rule-детекторы -> кандидаты (только включённые в regulations.yaml типы)
     types = rules.load_types()
-    cands = [c for d in detectors for c in d.finalize(timeline) if types.get(c.type_id) and types[c.type_id].enabled]
+    cands = []
+    for d in detectors:   # сбой одного правила не должен ронять весь анализ
+        try:
+            cands += [c for c in d.finalize(timeline) if types.get(c.type_id) and types[c.type_id].enabled]
+        except Exception as e:  # noqa: BLE001
+            print(f"[pipeline] правило {type(d).__name__} упало: {e}")
     cands = _dedup(cands)
 
     # 3. Верификация (VLM), пока есть время
@@ -92,8 +108,7 @@ def analyze(video_path: str | Path, with_frames: bool = True, progress=None) -> 
             "type": vt.name,
             "timecode_sec": round(float(c.t_peak), 2),
             "description": rules.build_description(vt, c.observed),
-            "evidence_frames": make_evidence(video_path, c.evidence_ts or [c.t_peak], c.boxes,
-                                             blur=config.BLUR_FACES) if with_frames else [],
+            "evidence_frames": _evidence(video_path, c) if with_frames else [],
             "rule": f"{vt.clause}: {vt.quote}",
             "source": f"{vt.source_act}. {vt.source_title}. {vt.source_url}",
             "confidence": round(float(c.confidence), 3),

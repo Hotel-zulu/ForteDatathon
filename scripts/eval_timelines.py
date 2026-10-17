@@ -43,7 +43,7 @@ def main():
     tp = tn = fp = fn = type_ok = 0
     errs, rows, per_type = [], [], {}
     for r in labels.itertuples():
-        p = WORKDIR / "timelines" / f"{r.key}.json"
+        p = WORKDIR / os.getenv("TIMELINES", "timelines") / f"{r.key}.json"
         if not p.exists():
             continue
         tl = load_tl(p)
@@ -95,6 +95,9 @@ def main():
                "tc_median": round(float(__import__('numpy').median(errs)), 2) if errs else None,
                "tc_within2": round(float(__import__('numpy').mean(__import__('numpy').array(errs) <= 2)), 2) if errs else None,
                "detector": det, "rows": rows}
+    if os.getenv("TIMELINES"):   # стресс-тест не перезаписывает основную оценку для панели
+        out = out / os.getenv("TIMELINES")
+        out.mkdir(parents=True, exist_ok=True)
     (out / "latest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"Сохранено: {out / 'latest.json'}")
 

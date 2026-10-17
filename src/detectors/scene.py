@@ -40,8 +40,11 @@ def segments(ts: list[float], flags: list[bool], min_len: float = 0.0, max_gap: 
 
 
 class Scene:
+    # Пороги заданы для «эталонного» масштаба: счётчик банкнот высотой ~10% кадра (наши ролики).
+    # На другом ракурсе/расстоянии они пересчитываются пропорционально размеру счётчика/ноутбука.
     ROOM_MARGIN = 0.07   # насколько низ рамки может быть выше основания двери и всё ещё «в комнате»
     MIN_H = 0.08
+    REF_H = 0.10
 
     def __init__(self, tl: list[FrameObs]):
         self.tl = tl
@@ -51,6 +54,12 @@ class Scene:
         self.safe = med_box(tl, {"safe_closed", "safe_open"})
         self.laptop = med_box(tl, {"laptop"})
         self.counter = med_box(tl, {"banknote_counter"})
+        ref = self.counter or self.laptop
+        h = (ref[3] - ref[1]) * (1.0 if self.counter else 1.25) if ref else self.REF_H
+        self.scale = float(min(2.5, max(0.4, h / self.REF_H)))
+        # основание двери годится как «линия стекла», только если дверь в глубине кадра (не у камеры)
+        self.door_ok = self.door is not None and self.door[3] < 0.8 and \
+            (self.door[2] - self.door[0]) * (self.door[3] - self.door[1]) < 0.6
         raw = [sum(1 for q in f.persons if self.in_room(q)) for f in tl]
         self.count = self._smooth(raw)
         self._stable = self._stabilize(tl)
@@ -74,11 +83,11 @@ class Scene:
     # --- люди ---
     def in_room(self, q: dict) -> bool:
         x1, y1, x2, y2 = q["xyxy"]
-        if q.get("conf", 1) < 0.4 or y2 - y1 < self.MIN_H:
+        if q.get("conf", 1) < 0.4 or y2 - y1 < self.MIN_H * self.scale:
             return False
-        if self.door is None:
-            return y2 - y1 >= 0.12
-        return y2 >= self.door[3] - self.ROOM_MARGIN
+        if not self.door_ok:   # другой ракурс: дверь у камеры или не найдена — фильтр только по размеру
+            return y2 - y1 >= 0.12 * self.scale
+        return y2 >= self.door[3] - self.ROOM_MARGIN * self.scale
 
     def room_persons(self, f: FrameObs) -> list[dict]:
         return [q for q in f.persons if self.in_room(q)]
