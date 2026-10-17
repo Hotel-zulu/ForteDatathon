@@ -14,5 +14,10 @@
     <Label value="collector_bag" background="#9ccc65" hotkey="q"/>
     <Label value="personal_item" background="#8d6e63" hotkey="w"/>
     <Label value="food_drink" background="#ff7043" hotkey="e"/>
+    <Label value="key_in_lock" background="#ffd600" hotkey="r"/>
+    <Label value="documents" background="#90a4ae" hotkey="t"/>
+    <Label value="screen_on" background="#29b6f6" hotkey="y"/>
+    <Label value="screen_locked" background="#283593" hotkey="u"/>
+    <Label value="cash_in_counter" background="#00c853" hotkey="i"/>
   </RectangleLabels>
 </View>

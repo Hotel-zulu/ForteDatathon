@@ -135,7 +135,7 @@ class SafeLeftOpen(Detector):
 
 class DoorLeftOpen(Detector):
     type_id = "door_left_open"
-    THR, MIN_OPEN, SHIFT = 0.6, 6.0, 1.5
+    THR, MIN_OPEN, SHIFT, MIN_OPEN_DET = 0.6, 6.0, 1.5, 9.0
 
     def finalize(self, tl):
         if not tl:
@@ -157,9 +157,40 @@ class DoorLeftOpen(Detector):
                 diff.append(float(np.abs(np.asarray(s) - ref).mean()))
         diff = sc._smooth(diff)
         out = []
+        # 1) модель видит открытую дверь (класс door_open): обычный проход 2–4 c, нарушение — ≥9 c
+        for a, b in segments(sc.ts, [sc.has(f, "door_open", 0.5) for f in tl], self.MIN_OPEN_DET, max_gap=0.5):
+            tp = min(b, a + self.SHIFT)
+            out.append(Candidate(self.type_id, a, b, t_peak=tp, confidence=0.8,
+                                 observed=f"С {a:.1f} по {b:.1f} c дверь в кассу остаётся открытой",
+                                 boxes=_box(sc.best("door_open", a, b)[1], "door_open"),
+                                 evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
+        # 2) запасной признак без модели: участок двери отличается от закрытого состояния
         for a, b in segments(sc.ts, [d >= self.THR for d in diff], self.MIN_OPEN):
             tp = min(b, a + self.SHIFT)
             out.append(Candidate(self.type_id, a, b, t_peak=tp, confidence=0.7,
                                  observed=f"С {a:.1f} по {b:.1f} c дверь в кассу остаётся открытой",
                                  boxes=_box(sc.door, "door_open"), evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
+        return out
+
+
+class NoIdentification(Detector):
+    """Клиент/инкассатор обслужен (на столе деньги или сумка), а удостоверение за визит ни разу не появилось."""
+    type_id = "no_client_identification"
+    MIN_VISIT, ID_CONF, MIN_ID_FRAMES, AT = 5.0, 0.35, 3, 5.0
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        out = []
+        for a, b in sc.visits(self.MIN_VISIT):
+            fs = sc.frames(a - 2, b + 2)
+            n_id = sum(1 for f in fs if sc.has(f, "id_card", self.ID_CONF))
+            money = sum(1 for f in fs if sc.has(f, "cash") or sc.has(f, "collector_bag", 0.3))
+            if n_id < self.MIN_ID_FRAMES and money >= 5:
+                tp = a + min(self.AT, (b - a) / 2)
+                out.append(Candidate(self.type_id, a, b, t_peak=tp, confidence=0.6,
+                                     observed=f"С {a:.1f} по {b:.1f} c у кассы клиент, идёт операция с наличными/сумкой, "
+                                              f"но удостоверение личности кассиру не предъявляется",
+                                     evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
         return out

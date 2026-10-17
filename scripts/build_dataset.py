@@ -21,7 +21,9 @@ ROOT = Path(__file__).resolve().parents[1]
 ANN = ROOT / "annotation"
 OUT = ROOT / "datasets" / "cashier"
 CLASSES = ["cash", "id_card", "phone", "banknote_counter", "laptop", "safe_closed", "safe_open",
-           "door_closed", "door_open", "collector_bag", "personal_item", "food_drink"]
+           "door_closed", "door_open", "collector_bag", "personal_item", "food_drink",
+           # новые классы (17.10): нужны для X-22, X-24, X-11/X-28, X-13/X-44/X-46
+           "key_in_lock", "documents", "screen_on", "screen_locked", "cash_in_counter"]
 
 
 def tasks(path):
