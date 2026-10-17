@@ -35,3 +35,4 @@ annotation/*/export.json
 annotation/.ls_data/
 annotation/.ls_credentials
 annotation/*.log
+datasets/
