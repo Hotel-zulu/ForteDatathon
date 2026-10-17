@@ -25,7 +25,7 @@ IMG_DIR = ROOT / "annotation" / "objects" / "images"
 # класс -> (текстовые запросы, порог уверенности)
 QUERIES = {
     "cash": (["banknotes", "paper money", "stack of cash", "money bills in hand"], 0.20),
-    "id_card": (["identity card", "plastic card", "passport", "ID document"], 0.22),
+    "id_card": (["identity card", "passport", "ID document"], 0.28),
     "phone": (["smartphone", "mobile phone in hand"], 0.25),
     "collector_bag": (["green cash bag", "sealed money bag"], 0.22),
     "personal_item": (["handbag", "jacket", "backpack", "wallet"], 0.25),
@@ -157,7 +157,8 @@ def refine(dets, img, video, glass):
         if any(inside((cx, cy), p) for p in glass.get(video, [])):
             continue  # в зоне стекла: отражение или предмет за стеклом
         if x["cls"] in ("personal_item", "collector_bag"):
-            x["cls"] = "collector_bag" if is_green(img, x["box"]) else "personal_item"
+            # сумка инкассатора = зелёная и найдена уверенно; иначе — личная вещь
+            x["cls"] = "collector_bag" if (is_green(img, x["box"]) and x["score"] >= 0.35) else "personal_item"
         out.append(x)
     return out
 
