@@ -158,19 +158,26 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--size", type=int, default=800)
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--init", help="продолжить с сохранённой модели (например models/rtdetr_cashier)")
     a = ap.parse_args()
     from transformers import RTDetrV2ForObjectDetection
 
     names = read_names()
     dev = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(0); random.seed(0)
-    model = RTDetrV2ForObjectDetection.from_pretrained(
-        BASE, num_labels=len(names), id2label=dict(enumerate(names)), label2id={n: i for i, n in enumerate(names)},
-        ignore_mismatched_sizes=True).to(dev)
+    if a.init:   # продолжение обучения с нашей модели (те же классы)
+        import shutil
+        shutil.copytree(a.init, ROOT / "models" / "rtdetr_cashier_resume_from", dirs_exist_ok=True)
+        model = RTDetrV2ForObjectDetection.from_pretrained(ROOT / "models" / "rtdetr_cashier_resume_from").to(dev)
+    else:
+        model = RTDetrV2ForObjectDetection.from_pretrained(
+            BASE, num_labels=len(names), id2label=dict(enumerate(names)), label2id={n: i for i, n in enumerate(names)},
+            ignore_mismatched_sizes=True).to(dev)
     tr = LabelDS("train", True, a.limit, a.size)
     va = LabelDS("val", False, a.limit, a.size)
     dl = torch.utils.data.DataLoader(tr, batch_size=a.batch, shuffle=True, collate_fn=collate, num_workers=2, persistent_workers=True)
-    dv = torch.utils.data.DataLoader(va, batch_size=a.batch, collate_fn=collate, num_workers=2)
+    # persistent_workers: процессы загрузки создаются один раз (не перечитывают скрипт после каждой эпохи)
+    dv = torch.utils.data.DataLoader(va, batch_size=a.batch, collate_fn=collate, num_workers=2, persistent_workers=True)
     bb = [p for n, p in model.named_parameters() if "backbone" in n]
     rest = [p for n, p in model.named_parameters() if "backbone" not in n]
     opt = torch.optim.AdamW([{"params": bb, "lr": a.lr / 10}, {"params": rest, "lr": a.lr}], weight_decay=1e-4)

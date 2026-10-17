@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import csv
+import os
 import json
 import sys
 from pathlib import Path
@@ -40,13 +41,16 @@ def main():
             want.setdefault(vid, set()).add(tid)
     labels = load_labels()
     tp = tn = fp = fn = type_ok = 0
-    errs, rows = [], []
+    errs, rows, per_type = [], [], {}
     for r in labels.itertuples():
         p = WORKDIR / "timelines" / f"{r.key}.json"
         if not p.exists():
             continue
         tl = load_tl(p)
-        cands = [c for d in build_detectors() for c in d.finalize(tl) if types.get(c.type_id) and types[c.type_id].enabled]
+        allc = [c for d in build_detectors() for c in d.finalize(tl) if types.get(c.type_id)]
+        for c in allc:   # отчёт по каждому типу, включая выключенные — чтобы решить, что включать
+            per_type.setdefault(c.type_id, []).append((r.key, int(r.violation), c.type_id in want.get(r.key, set())))
+        cands = [c for c in allc if types[c.type_id].enabled or os.getenv("EVAL_ALL")]
         cands = _dedup(cands)
         pred = int(bool(cands))
         msg = ""
@@ -71,12 +75,19 @@ def main():
                      "team_types": sorted(want.get(r.key, [])),
                      "team_text": team.get(r.key, {}).get("violation", "")})
         print(f"{r.key:5s} gt={'%.0f' % r.timecode_sec if r.violation else '-':>3s}  {msg:40s} {found}")
+    print("\nПо типам (все правила, включая выключенные): видео | ✓ нарушение того же типа | ~ нарушение другого типа | ✗ ложное")
+    for tid, hits in sorted(per_type.items()):
+        vids = {}
+        for v, lab, same in hits:
+            vids[v] = "✓" if same else ("~" if lab else "✗")
+        on = "вкл " if types[tid].enabled else "выкл"
+        print(f"  [{on}] {tid:30s} " + " ".join(f"{v}{m}" for v, m in vids.items()))
     n = tp + tn + fp + fn
     print(f"\nAccuracy вердикта {(tp + tn) / n:.3f} ({n} видео) | нашли {tp} из {tp + fn} нарушений | ложных {fp} из {fp + tn}")
     if errs:
         import numpy as np
         print(f"Таймкод: медиана ошибки {np.median(errs):.1f} c, ≤2 c: {np.mean(np.array(errs) <= 2):.0%} | тип совпал {type_ok}/{tp}")
-    import time, os
+    import time
     out = WORKDIR / "eval"; out.mkdir(parents=True, exist_ok=True)
     det = os.getenv("DETECTOR_WEIGHTS", "models/detector/weights/best.pt")
     summary = {"available": True, "created_at": time.time(), "videos": n, "accuracy": round((tp + tn) / n, 3),

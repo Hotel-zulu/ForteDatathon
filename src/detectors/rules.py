@@ -58,8 +58,18 @@ class DepartureDetector(Detector):
                               _box(bx, "collector_bag")))
             if sc.frac("safe_open", w0, w1) >= self.ITEM_FRAC:
                 found.append(("safe_left_open", "сейф остался открытым", _box(sc.safe, "safe_open")))
+            if sc.frac("key_in_lock", w0, w1, conf=0.35) >= self.ITEM_FRAC:
+                _, bx = sc.best("key_in_lock", w0, w1)
+                found.append(("key_left_in_lock", "в замке сейфа остался ключ", _box(bx, "key_in_lock")))
+            if sc.frac("documents", w0, w1, conf=0.35) >= self.ITEM_FRAC:
+                _, bx = sc.best("documents", w0, w1)
+                found.append(("documents_left_open", "на столе остались документы", _box(bx, "documents")))
+            # экран: класс модели screen_on (если есть) или пиксельный признак яркости
             scr = [f.extra.get("screen") for f in sc.frames(w0, w1) if f.extra.get("screen") is not None]
-            if scr and float(np.median(scr)) >= self.SCREEN_ON:
+            scr_on = sc.frac("screen_on", w0, w1, conf=0.4)
+            scr_lock = sc.frac("screen_locked", w0, w1, conf=0.4)
+            if scr_on >= self.ITEM_FRAC and scr_on > scr_lock or \
+                    (not scr_on and not scr_lock and scr and float(np.median(scr)) >= self.SCREEN_ON):
                 found.append(("workstation_unlocked",
                               "экран ноутбука остался включённым с открытой рабочей программой (не заблокирован); "
                               "открытая норма требует автоблокировку, обязанность блокировать при уходе — ВНД банка",
@@ -193,4 +203,125 @@ class NoIdentification(Detector):
                                      observed=f"С {a:.1f} по {b:.1f} c у кассы клиент, идёт операция с наличными/сумкой, "
                                               f"но удостоверение личности кассиру не предъявляется",
                                      evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
+        return out
+
+
+# ======================= правила на новых классах (разметка 18.10) =======================
+
+def _counting(sc: Scene, f: FrameObs) -> bool:
+    """Признак пересчёта на оборудовании: класс cash_in_counter или деньги на/в счётчике."""
+    if sc.has(f, "cash_in_counter", 0.35):
+        return True
+    if sc.counter is None:
+        return False
+    return any(o["cls"] == "cash" and o["conf"] >= 0.4 and inside_frac(o["xyxy"], sc.counter) > 0.3 for o in f.objects)
+
+
+class PersonalItems(Detector):
+    """Личная вещь (сумка, одежда) лежит на рабочем столе кассира ≥3 c."""
+    type_id = "personal_items_in_cash_area"
+    CONF, MIN_LEN = 0.45, 3.0
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        out = []
+        for a, b in segments(sc.ts, [sc.has(f, "personal_item", self.CONF) for f in tl], self.MIN_LEN, 0.6)[:1]:
+            tp = a + 1.0
+            out.append(Candidate(self.type_id, a, b, t_peak=tp, confidence=0.65,
+                                 observed=f"С {a:.1f} c на рабочем месте кассира лежит личная вещь (сумка/одежда)",
+                                 boxes=_box(sc.best("personal_item", a, b)[1], "personal_item"),
+                                 evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
+        return out
+
+
+class ThirdPerson(Detector):
+    """Во время обслуживания у кассы трое и больше людей, и в этот момент передаётся документ/деньги."""
+    type_id = "third_party_document"
+    MIN_LEN = 3.0
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        out = []
+        for a, b in segments(sc.ts, [c >= 3 for c in sc.count], self.MIN_LEN):
+            fs = sc.frames(a, b)
+            ids = sum(1 for f in fs if sc.has(f, "id_card", 0.35))
+            if ids >= 3:
+                tp = a + 1.0
+                out.append(Candidate(self.type_id, a, b, t_peak=tp, confidence=0.6,
+                                     observed=f"С {a:.1f} c у кассы находятся три человека; удостоверение личности "
+                                              f"предъявляет/передаёт не тот человек, который обслуживается",
+                                     boxes=_box(sc.best("id_card", a, b)[1], "id_card"),
+                                     evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
+        return out
+
+
+class NotCountedToSafe(Detector):
+    """Деньги убраны в сейф, а за 20 c до этого не было пересчёта на счётчике."""
+    type_id = "cash_not_counted"
+    LOOKBACK = 20.0
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        out = []
+        for a, b in segments(sc.ts, [sc.has(f, "safe_open") for f in tl], 1.0, 0.3):
+            pre = sc.frames(a - self.LOOKBACK, a)
+            cash = sum(1 for f in pre if sc.has(f, "cash"))
+            counted = sum(1 for f in pre if _counting(sc, f))
+            if cash >= 10 and counted == 0:
+                out.append(Candidate(self.type_id, a - self.LOOKBACK, b, t_peak=a, confidence=0.55,
+                                     observed=f"Около {a:.1f} c наличные убираются в сейф; перед этим пересчёт "
+                                              f"на счётчике банкнот не проводился",
+                                     boxes=_box(sc.safe, "safe_open"), evidence_ts=[round(a, 2), round(max(0, a - 5), 2)]))
+        return out
+
+
+class NoMachineCheck(Detector):
+    """Кассир долго работает с наличными, но ни разу не использует счётчик-детектор банкнот."""
+    type_id = "no_authenticity_check"
+    MIN_CASH = 5.0
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        if any(_counting(sc, f) for f in tl):
+            return []
+        runs = segments(sc.ts, [sc.has(f, "cash") for f in tl], 1.0, 0.6)
+        total = sum(b - a for a, b in runs)
+        if total < self.MIN_CASH:
+            return []
+        a, b = max(runs, key=lambda r: r[1] - r[0])
+        tp = (a + b) / 2
+        return [Candidate(self.type_id, a, b, t_peak=tp, confidence=0.5,
+                          observed=f"С {a:.1f} по {b:.1f} c кассир работает с наличными вручную; счётчик банкнот "
+                                   f"(проверка подлинности на оборудовании) не используется",
+                          boxes=_box(sc.best("cash", a, b)[1], "cash"), evidence_ts=[round(tp, 2)])]
+
+
+class ClientLeftEarly(Detector):
+    """Клиент уходит (в комнате остаётся один), а деньги операции ещё лежат на столе/в счётчике."""
+    type_id = "client_left_before_completion"
+
+    def finalize(self, tl):
+        if not tl:
+            return []
+        sc = Scene(tl)
+        out = []
+        for a, b in sc.visits(4.0):
+            if b >= sc.dur - 1.0:
+                continue   # клиент не ушёл до конца записи
+            around = sc.frac("cash", b - 1.0, b + 2.0)
+            in_ctr = any(_counting(sc, f) for f in sc.frames(b - 3.0, b + 1.0))
+            if around >= 0.5 and in_ctr:
+                out.append(Candidate(self.type_id, a, b, t_peak=b, confidence=0.5,
+                                     observed=f"Около {b:.1f} c клиент уходит от кассы, а наличные операции ещё "
+                                              f"на столе/в счётчике — операция не завершена",
+                                     boxes=_box(sc.best("cash", b - 1, b + 2)[1], "cash"),
+                                     evidence_ts=[round(b, 2), round(max(a, b - 2), 2)]))
         return out

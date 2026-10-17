@@ -16,10 +16,10 @@ def build_perception() -> Perception:
 
 
 def build_detectors() -> list[Detector]:
-    from src.detectors.rules import (CashAtNextClient, DepartureDetector, DoorLeftOpen, NoIdentification,
-                                     SafeLeftOpen)
-    # NoIdentification срабатывает, только если тип no_client_identification включён в regulations.yaml
-    return [DepartureDetector(), CashAtNextClient(), SafeLeftOpen(), DoorLeftOpen(), NoIdentification()]
+    """Все правила. Срабатывают только типы с enabled: true в configs/regulations.yaml."""
+    from src.detectors import rules as R
+    return [R.DepartureDetector(), R.CashAtNextClient(), R.SafeLeftOpen(), R.DoorLeftOpen(), R.NoIdentification(),
+            R.PersonalItems(), R.ThirdPerson(), R.NotCountedToSafe(), R.NoMachineCheck(), R.ClientLeftEarly()]
 
 
 def build_verifier() -> Verifier | None:
