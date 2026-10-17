@@ -3,115 +3,533 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Контроль кассовой дисциплины</title>
+<title>Cash Compliance AI</title>
 <style>
-  :root { --bg:#f5f6f8; --card:#fff; --ink:#1c2230; --muted:#667085; --line:#e4e7ec; --accent:#b4122b; --ok:#127a3d; --warn:#b54708; }
-  * { box-sizing:border-box }
-  body { margin:0; font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink) }
-  main { max-width:980px; margin:0 auto; padding:24px 16px 64px }
-  h1 { font-size:22px; margin:0 0 4px } .sub { color:var(--muted); margin:0 0 20px }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px }
-  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center }
-  input[type=password] { padding:8px 10px; border:1px solid var(--line); border-radius:8px; min-width:220px }
-  .drop { border:2px dashed var(--line); border-radius:12px; padding:28px; text-align:center; color:var(--muted); cursor:pointer }
-  .drop.over { border-color:var(--accent); color:var(--ink) }
-  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 18px; font-weight:600; cursor:pointer }
-  button:disabled { opacity:.5; cursor:default }
-  .bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:12px }
-  .bar > div { height:100%; width:0; background:var(--accent); transition:width .4s }
-  .verdict { font-size:20px; font-weight:700; padding:14px 18px; border-radius:10px }
-  .verdict.ok { background:#e7f6ec; color:var(--ok) } .verdict.bad { background:#fdecee; color:var(--accent) }
-  .v { border-top:1px solid var(--line); padding-top:16px; margin-top:16px }
-  .v h3 { margin:0 0 6px; font-size:17px } .tc { font-variant-numeric:tabular-nums; color:var(--accent); font-weight:700 }
-  .frames { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 }
-  .frames img { width:300px; max-width:100%; border-radius:8px; border:1px solid var(--line) }
-  .src { font-size:13px; color:var(--muted); background:#f9fafb; border-radius:8px; padding:8px 12px }
-  .note { font-size:13px; color:var(--muted) } .err { color:var(--accent) }
-  video { width:100%; border-radius:10px; margin-top:12px; background:#000 }
+:root{
+  --red:#d42a2a;--red-2:#b81f1f;--red-soft:#fdecec;--side:#1e2025;--side-2:#2a2d33;--side-text:#c9ccd3;
+  --bg:#f5f6f8;--card:#fff;--line:#e6e8ec;--text:#16181d;--muted:#6b7080;--muted-2:#9aa0ad;
+  --green:#1d8a4c;--green-soft:#e7f5ec;--amber:#b86e06;--amber-soft:#fdf3e2;--blue:#3a6ad6;--blue-soft:#eaf0fc;
+  --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+.app{display:flex;min-height:100vh}
+/* --- боковая панель --- */
+.side{width:256px;flex:none;background:var(--side);color:var(--side-text);display:flex;flex-direction:column;
+  position:fixed;inset:0 auto 0 0;padding:22px 16px}
+.brand{display:flex;gap:12px;align-items:center;padding:0 6px 26px}
+.logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#e5413b,#a8161a);display:grid;place-items:center;
+  box-shadow:0 6px 16px rgba(212,42,42,.35)}
+.brand b{display:block;color:#fff;font-size:15px;letter-spacing:-.2px;white-space:nowrap}.brand b span{color:#ff5a52}
+.brand small{display:block;font-size:10px;letter-spacing:1.3px;white-space:nowrap;text-transform:uppercase;color:#9ca1ab;margin-top:2px}
+.side h6{margin:6px 10px 10px;font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:#80858f;font-weight:600}
+.nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;margin-bottom:3px;color:var(--side-text);font-size:14.5px}
+.nav a:hover{background:var(--side-2);color:#fff}
+.nav a.on{background:linear-gradient(90deg,var(--red),#c42424);color:#fff;box-shadow:0 6px 18px rgba(212,42,42,.3)}
+.nav svg{width:19px;height:19px;flex:none}
+.nav .cnt{margin-left:auto;background:#3a3d44;color:#fff;border-radius:20px;font-size:11.5px;padding:1px 8px}
+.nav a.on .cnt{background:rgba(255,255,255,.25)}
+.secure{margin-top:auto;background:var(--side-2);border:1px solid #363940;border-radius:12px;padding:13px;display:flex;gap:11px;align-items:center}
+.secure .ic{width:34px;height:34px;border-radius:9px;background:#1f3b2c;display:grid;place-items:center;color:#5fd08e;flex:none}
+.secure b{color:#fff;font-size:13px;display:block}.secure small{font-size:11.5px;color:#9ca1ab}
+.foot{font-size:11px;color:#7d828c;padding:12px 6px 0}
+/* --- основная часть --- */
+.main{margin-left:256px;flex:1;min-width:0}
+.top{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 28px;position:sticky;top:0;z-index:5}
+.search{flex:0 1 460px;display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:10px;padding:0 12px;height:40px;background:#fafbfc}
+.search input{border:0;outline:0;background:transparent;flex:1;font:inherit}
+.chip{display:inline-flex;align-items:center;gap:7px;border-radius:30px;padding:5px 12px;font-size:12px;font-weight:600}
+.chip.ok{background:var(--green-soft);color:var(--green)}.chip.bad{background:var(--red-soft);color:var(--red)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.spacer{flex:1}
+.who{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:10px;background:var(--side);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+.who b{display:block;font-size:13.5px}.who small{color:var(--muted);font-size:12px}
+.content{padding:28px;max-width:1440px}
+.eyebrow{color:var(--red);font-size:11.5px;letter-spacing:1.6px;font-weight:700;text-transform:uppercase}
+h1{font-size:30px;letter-spacing:-.6px;margin:6px 0 4px;font-weight:650}
+.lead{color:var(--muted);margin:0;font-size:15px}
+.head{display:flex;align-items:flex-end;gap:20px;margin-bottom:24px}.head>div:first-child{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font-weight:600;color:var(--text)}
+.btn:hover{border-color:#cfd3da}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 6px 16px rgba(212,42,42,.28)}
+.btn.primary:hover{background:var(--red-2)}
+.btn.green{background:var(--green);border-color:var(--green);color:#fff}
+.btn.sm{padding:6px 10px;font-size:12.5px}
+.btn svg{width:17px;height:17px}
+.grid{display:grid;gap:18px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g2{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr)}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+.card h3{margin:0;font-size:17px;font-weight:620;letter-spacing:-.2px}.card .sub{color:var(--muted);font-size:13px;margin-top:3px}
+.ch{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}.ch>div:first-child{flex:1}
+.kpi .row{display:flex;justify-content:space-between;align-items:flex-start}
+.kpi .lbl{color:#3f4350;font-size:13.5px}
+.kpi .ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center}
+.kpi .ico svg{width:22px;height:22px}
+.kpi .val{font-size:34px;font-weight:700;letter-spacing:-1px;margin:10px 0 6px}
+.kpi .note{font-size:12.5px;color:var(--muted)}.kpi .note b{font-weight:650}
+.c-red{background:var(--red-soft);color:var(--red)}.c-amber{background:var(--amber-soft);color:var(--amber)}
+.c-blue{background:var(--blue-soft);color:var(--blue)}.c-green{background:var(--green-soft);color:var(--green)}
+.t-green{color:var(--green)}.t-red{color:var(--red)}.t-amber{color:var(--amber)}.t-muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);background:#fbfbfc}
+td{padding:13px 14px;border-bottom:1px solid #eff0f3;vertical-align:middle}
+tr.click{cursor:pointer}tr.click:hover td{background:#fafbfc}
+.tbl{margin:0 -22px -22px;overflow-x:auto}
+.file{display:flex;align-items:center;gap:12px}.file .fi{width:38px;height:38px;border-radius:10px;background:var(--red-soft);color:var(--red);display:grid;place-items:center;flex:none}
+.file b{display:block;font-weight:600}.file small{color:var(--muted);font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-amber{background:var(--amber-soft);color:var(--amber)}.p-green{background:var(--green-soft);color:var(--green)}
+.p-red{background:var(--red-soft);color:var(--red)}.p-blue{background:var(--blue-soft);color:var(--blue)}.p-gray{background:#eef0f3;color:#555b68}
+.legend{display:flex;flex-direction:column;gap:12px;flex:1}.legend div{display:flex;align-items:center;gap:10px;font-size:13px}
+.legend i{width:10px;height:10px;border-radius:3px;flex:none}.legend span{flex:1;color:#3f4350}.legend b{font-weight:650}
+.sla{display:flex;align-items:center;gap:12px;background:#f7f8fa;border-radius:12px;padding:14px 16px;margin-top:18px}
+.empty{padding:34px;text-align:center;color:var(--muted)}
+.drop{border:2px dashed #d6d9df;border-radius:16px;padding:46px;text-align:center;background:#fcfcfd;transition:.15s}
+.drop.over{border-color:var(--red);background:var(--red-soft)}
+.bar{height:8px;background:#eef0f3;border-radius:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--red);border-radius:8px;transition:width .4s}
+.filters{display:flex;gap:8px;flex-wrap:wrap}.filters button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 13px;font-size:13px}
+.filters button.on{background:var(--side);color:#fff;border-color:var(--side)}
+.player{background:#000;border-radius:12px;overflow:hidden;position:relative}
+.player video{width:100%;display:block;max-height:62vh;background:#000}
+.tline{position:relative;height:30px;margin-top:10px;background:#eef0f3;border-radius:8px}
+.tline .mk{position:absolute;top:3px;width:4px;height:24px;border-radius:3px;background:var(--red);transform:translateX(-2px);cursor:pointer}
+.tline .cur{position:absolute;top:0;bottom:0;width:2px;background:var(--side)}
+.vcard{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff}
+.vcard.act{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.tc{font-variant-numeric:tabular-nums;font-weight:700;color:var(--red);background:var(--red-soft);border:0;border-radius:8px;padding:4px 9px}
+.quote{border-left:3px solid var(--red);background:#fafafb;padding:10px 12px;border-radius:0 8px 8px 0;margin:10px 0;font-size:13px;color:#2c2f37}
+.frames{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.frames img{height:130px;border-radius:8px;border:1px solid var(--line);cursor:zoom-in}
+.frames figure{margin:0}.frames figcaption{font-size:11px;color:var(--muted);text-align:center}
+textarea,input[type=text],input[type=password]{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;outline:0}
+textarea:focus,input:focus{border-color:#b9bec7}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px}.kv span{color:var(--muted)}
+.rule{display:flex;flex-direction:column}.rule .meta{font-size:12.5px;color:var(--muted);margin-top:auto;padding-top:10px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+pre{background:#16181d;color:#e6e7ea;border-radius:10px;padding:14px;overflow-x:auto;margin:8px 0 0}
+.modal{position:fixed;inset:0;background:rgba(15,17,21,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .box{background:#fff;border-radius:16px;padding:26px;width:min(440px,100%)}
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);display:grid;place-items:center;z-index:60;cursor:zoom-out}
+.zoom img{max-width:92vw;max-height:92vh;border-radius:10px}
+.ok-row td:first-child{border-left:3px solid var(--green)}.bad-row td:first-child{border-left:3px solid var(--red)}.fp-row td:first-child{border-left:3px solid var(--amber)}
+@media (max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g2,.g3{grid-template-columns:1fr}}
+@media (max-width:760px){.side{display:none}.main{margin-left:0}.content{padding:16px}.top{padding:0 16px}.who div{display:none}.g4{grid-template-columns:1fr}.head{flex-direction:column;align-items:flex-start}}
+@media print{.side,.top,.noprint{display:none!important}.main{margin:0}.card{box-shadow:none}}
 </style>
 </head>
 <body>
-<main>
-  <h1>Контроль кассовой дисциплины по видео</h1>
-  <p class="sub">Загрузите видеозапись кассы — сервис покажет признаки возможных нарушений, таймкод, кадр и норматив.</p>
-
-  <div class="card">
-    <div class="row">
-      <label>API-ключ <input type="password" id="key" placeholder="X-API-Key"></label>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <div><b>Cash Compliance <span>AI</span></b><small>Кассовая дисциплина</small></div>
     </div>
-    <div class="drop" id="drop" style="margin-top:14px">Перетащите видео (.mov) сюда или нажмите для выбора
-      <input type="file" id="file" accept="video/*,.mov" hidden></div>
-    <div class="row" style="margin-top:14px">
-      <button id="go" disabled>Проверить</button>
-      <span id="status" class="note"></span>
+    <h6>Рабочее пространство</h6>
+    <nav class="nav" id="nav"></nav>
+    <div class="secure">
+      <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
+      <div><b>Работает локально</b><small>Видео и модели не покидают вашу сеть</small></div>
     </div>
-    <div class="bar"><div id="prog"></div></div>
-    <video id="player" controls hidden></video>
+    <div class="foot">Datathon 26 · кейс кассовой дисциплины<br>Без облачных ИИ-сервисов</div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8f9b" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="q" placeholder="Поиск по видео и нарушениям…"></label>
+      <div class="spacer"></div>
+      <span class="chip" id="engine"><span class="dot"></span>Проверка…</span>
+      <div class="who"><div class="avatar">КК</div><div><b>Контроль</b><small>Сотрудник комплаенса</small></div></div>
+    </header>
+    <main class="content" id="view"></main>
   </div>
-
-  <div id="result"></div>
-  <p class="note">Результат — подсказка для проверки человеком, а не юридическое заключение. Лица на кадрах размыты.</p>
-</main>
+</div>
+<div id="layer"></div>
 <script>
-const $ = id => document.getElementById(id);
-let file = null;
-try { $("key").value = localStorage.getItem("apiKey") || ""; } catch (e) {}
-$("key").onchange = () => { try { localStorage.setItem("apiKey", $("key").value); } catch (e) {} };
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = { get(k, d = "") { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+let KEY = store.get("apiKey");
 
-function pick(f) {
-  if (!f) return;
-  file = f; $("drop").textContent = f.name + " (" + (f.size / 1048576).toFixed(1) + " МБ)";
-  $("go").disabled = false;
-  const p = $("player"); p.src = URL.createObjectURL(f); p.hidden = false;
-}
-$("drop").onclick = () => $("file").click();
-$("file").onchange = e => pick(e.target.files[0]);
-["dragover","dragenter"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
-["dragleave","drop"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
-$("drop").addEventListener("drop", e => pick(e.dataTransfer.files[0]));
-
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmt = s => { const m = Math.floor(s / 60), r = (s % 60).toFixed(1).padStart(4, "0"); return m + ":" + r; };
-
-$("go").onclick = async () => {
-  $("go").disabled = true; $("result").innerHTML = ""; $("prog").style.width = "5%";
-  $("status").textContent = "Загрузка видео…";
-  const headers = { "X-API-Key": $("key").value };
-  const fd = new FormData(); fd.append("file", file);
-  try {
-    const r = await fetch("/api/v1/analyze", { method: "POST", headers, body: fd });
-    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
-    const { job_id } = await r.json();
-    $("status").textContent = "Анализ… (задача " + job_id + ")";
-    while (true) {
-      await new Promise(res => setTimeout(res, 1500));
-      const j = await (await fetch("/api/v1/jobs/" + job_id, { headers })).json();
-      if (j.status === "processing") { $("prog").style.width = (10 + 85 * (j.progress || 0)) + "%"; continue; }
-      $("prog").style.width = "100%";
-      if (j.status === "failed") throw new Error(j.error || "ошибка обработки");
-      render(j); $("status").textContent = "Готово"; break;
-    }
-  } catch (e) {
-    $("status").innerHTML = '<span class="err">Ошибка: ' + esc(e.message) + "</span>";
-  }
-  $("go").disabled = false;
+const I = {
+  overview:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  video:'<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/>',
+  history:'<path d="M3 12a9 9 0 103-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+  flag:'<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  book:'<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/><path d="M4 19a2 2 0 012-2h13"/>',
+  chart:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+  code:'<path d="M8 6l-6 6 6 6"/><path d="M16 6l6 6-6 6"/>',
+  film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4M3 12h18"/>',
+  warn:'<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 .5c0 2-2.5 2.2-2.5 4M12 17h.01"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>',
+  shield:'<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>', up:'<path d="M12 19V5M5 12l7-7 7 7"/>', dl:'<path d="M12 4v12M6 10l6 6 6-6M4 20h16"/>',
+  print:'<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  check:'<path d="M5 12l5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>', ext:'<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/>',
 };
+const ic = (n, w = 19) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
 
-function render(j) {
-  const bad = j.verdict === "violation";
-  let h = '<div class="card"><div class="verdict ' + (bad ? "bad" : "ok") + '">' +
-    (bad ? "Обнаружены признаки возможных нарушений: " + j.violations.length : "Нарушение не обнаружено") + "</div>";
-  for (const v of j.violations) {
-    h += '<div class="v"><h3>' + esc(v.type) + ' — <a href="#" class="tc" data-t="' + v.timecode_sec + '">' + fmt(v.timecode_sec) + "</a></h3>" +
-      "<div>" + esc(v.description) + "</div><div class=frames>" +
-      v.evidence_frames.map(f => '<img alt="кадр ' + f.timestamp_sec + ' c" src="data:image/jpeg;base64,' + f.image_base64 + '">').join("") +
-      "</div>" + (v.source ? '<div class="src"><b>Норматив:</b> ' + esc(v.rule) + "<br>" + esc(v.source) + "</div>" : "") + "</div>";
-  }
-  $("result").innerHTML = h + "</div>";
-  document.querySelectorAll(".tc").forEach(a => a.onclick = e => {
-    e.preventDefault(); const p = $("player"); p.currentTime = +a.dataset.t; p.play(); p.scrollIntoView({ behavior: "smooth" });
-  });
+const NAV = [
+  ["overview", "Обзор", "overview"], ["new", "Новый анализ", "video"], ["history", "История анализов", "history"],
+  ["events", "Нарушения", "flag", "cnt"], ["rules", "Нормативная база", "book"], ["quality", "Качество модели", "chart"],
+  ["api", "API для жюри", "code"],
+];
+function renderNav(active, cnt) {
+  $("#nav").innerHTML = NAV.map(([id, t, i, c]) =>
+    `<a href="#/${id}" class="${active === id ? "on" : ""}">${ic(i)}${t}${c && cnt ? `<span class="cnt">${cnt}</span>` : ""}</a>`).join("");
 }
+
+// --- API ---
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), "X-API-Key": KEY } });
+  if (r.status === 401) { askKey(); throw new Error("401"); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+function askKey(msg) {
+  if ($("#keybox")) return;
+  $("#layer").innerHTML = `<div class="modal" id="keybox"><div class="box">
+    <h3 style="margin:0 0 6px">Вход в панель</h3>
+    <p class="t-muted" style="margin:0 0 14px">Введите API-ключ сервиса (тот же, что для жюри, заголовок X-API-Key). Хранится только в этом браузере.</p>
+    <input type="password" id="keyin" placeholder="API-ключ" value="${esc(KEY)}">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn primary" id="keyok">Войти</button></div></div></div>`;
+  const go = () => { KEY = $("#keyin").value.trim(); store.set("apiKey", KEY); $("#layer").innerHTML = ""; route(); };
+  $("#keyok").onclick = go; $("#keyin").onkeydown = e => e.key === "Enter" && go(); $("#keyin").focus();
+}
+
+// --- форматирование ---
+const pad = n => String(n).padStart(2, "0");
+function fmtDate(ts) {
+  const d = new Date(ts * 1000), now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+  const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (d.toDateString() === now.toDateString()) return `Сегодня, ${hm}`;
+  if (d.toDateString() === y.toDateString()) return `Вчера, ${hm}`;
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}, ${hm}`;
+}
+const fmtSec = s => s == null ? "—" : s < 60 ? `${Math.round(s)} с` : `${Math.floor(s / 60)} мин ${pad(Math.round(s % 60))} с`;
+const tc = s => { s = +s || 0; return `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}.${Math.floor((s % 1) * 10)}`; };
+const pct = x => x == null ? "—" : `${Math.round(x * 100)}%`;
+const PALETTE = ["#d42a2a", "#e08a2e", "#3a6ad6", "#1d8a4c", "#8a4fd6", "#c43f8e", "#6b7080", "#0e9aa7"];
+const typeColor = (() => { const m = {}; let i = 0; return t => m[t] ??= PALETTE[i++ % PALETTE.length]; })();
+
+function statusPill(j) {
+  if (j.status === "processing") return `<span class="pill p-blue"><span class="dot"></span>Анализ ${j.progress != null ? Math.round(j.progress * 100) + "%" : ""}</span>`;
+  if (j.status === "failed") return `<span class="pill p-gray">Ошибка</span>`;
+  if (j.verdict !== "violation") return `<span class="pill p-green"><span class="dot"></span>Без нарушений</span>`;
+  if (j.review?.decision === "confirmed") return `<span class="pill p-red"><span class="dot"></span>Нарушение подтверждено</span>`;
+  if (j.review?.decision === "rejected") return `<span class="pill p-gray"><span class="dot"></span>Отклонено</span>`;
+  return `<span class="pill p-amber"><span class="dot"></span>Требуется проверка</span>`;
+}
+
+// --- графики (чистый SVG) ---
+function areaChart(points, w = 760, h = 250) {
+  const pl = 34, pr = 14, pt = 12, pb = 30, max = Math.max(4, ...points.map(p => p.v));
+  const step = Math.pow(10, Math.floor(Math.log10(max))), top = Math.ceil(max / step) * step;
+  const X = i => pl + (w - pl - pr) * (points.length === 1 ? .5 : i / (points.length - 1));
+  const Y = v => pt + (h - pt - pb) * (1 - v / top);
+  const P = points.map((p, i) => [X(i), Y(p.v)]);
+  let d = `M${P[0][0]},${P[0][1]}`;
+  for (let i = 0; i < P.length - 1; i++) {           // сглаживание (Catmull-Rom -> Безье)
+    const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+    const cy = y => Math.min(Y(0), Math.max(pt, y));   // кривая не уходит ниже нуля
+    d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${cy(p1[1] + (p2[1] - p0[1]) / 6)} ${p2[0] - (p3[0] - p1[0]) / 6},${cy(p2[1] - (p3[1] - p1[1]) / 6)} ${p2[0]},${p2[1]}`;
+  }
+  const grid = [0, .25, .5, .75, 1].map(k => { const v = Math.round(top * k), y = Y(v);
+    return `<line x1="${pl}" x2="${w - pr}" y1="${y}" y2="${y}" stroke="#eef0f3"/><text x="${pl - 8}" y="${y + 4}" font-size="11" fill="#9aa0ad" text-anchor="end">${v}</text>`; }).join("");
+  const labels = points.map((p, i) => `<text x="${X(i)}" y="${h - 8}" font-size="11.5" fill="#6b7080" text-anchor="middle">${p.l}</text>`).join("");
+  const dots = P.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#d42a2a" stroke-width="2.2"><title>${points[i].l}: ${points[i].v}</title></circle>`).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="График анализов по дням">
+    <defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#d42a2a" stop-opacity=".22"/><stop offset="1" stop-color="#d42a2a" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path d="${d} L${P.at(-1)[0]},${Y(0)} L${P[0][0]},${Y(0)} Z" fill="url(#ga)"/>
+    <path d="${d}" fill="none" stroke="#d42a2a" stroke-width="2.6"/>${dots}${labels}</svg>`;
+}
+function donut(items, total, size = 190) {
+  const r = 72, c = 2 * Math.PI * r, sum = items.reduce((a, x) => a + x.v, 0) || 1;
+  let off = 0;
+  const segs = items.length ? items.map(x => { const len = c * x.v / sum;
+    const s = `<circle r="${r}" cx="95" cy="95" fill="none" stroke="${x.c}" stroke-width="22" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-off}"><title>${esc(x.l)}: ${x.v}</title></circle>`;
+    off += len; return s; }).join("") : `<circle r="${r}" cx="95" cy="95" fill="none" stroke="#eef0f3" stroke-width="22"/>`;
+  return `<svg viewBox="0 0 190 190" width="${size}" height="${size}" style="flex:none"><g transform="rotate(-90 95 95)">${segs}</g>
+    <text x="95" y="96" text-anchor="middle" font-size="34" font-weight="700" fill="#16181d">${total}</text>
+    <text x="95" y="120" text-anchor="middle" font-size="12" fill="#6b7080">нарушений</text></svg>`;
+}
+
+// ================= страницы =================
+const head = (eyebrow, title, lead, right = "") =>
+  `<div class="head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p class="lead">${lead}</p></div>${right}</div>`;
+const newBtn = `<a class="btn primary" href="#/new">${ic("spark", 18)}Анализировать видео</a>`;
+const kpi = (lbl, val, note, icon, cls) => `<div class="card kpi"><div class="row"><span class="lbl">${lbl}</span>
+  <span class="ico ${cls}">${ic(icon)}</span></div><div class="val">${val}</div><div class="note">${note}</div></div>`;
+
+function jobsTable(js, empty = "Анализов пока нет — загрузите видео") {
+  if (!js.length) return `<div class="empty">${empty}</div>`;
+  return `<div class="tbl"><table><thead><tr><th>Запись</th><th>Загружено</th><th>Длительность</th><th>Нарушений</th><th>Статус</th><th></th></tr></thead><tbody>
+  ${js.map(j => `<tr class="click" onclick="location.hash='#/job/${j.job_id}'">
+    <td><div class="file"><span class="fi">${ic("video", 18)}</span><div><b>${esc(j.file_name === "—" ? "Видео " + j.job_id : j.file_name)}</b><small>${j.duration_sec ? fmtSec(j.duration_sec) : ""}${j.size_mb ? " · " + j.size_mb + " МБ" : ""} · id ${j.job_id}</small></div></div></td>
+    <td>${fmtDate(j.created_at)}</td><td>${j.processing_sec ? "анализ " + fmtSec(j.processing_sec) : "—"}</td>
+    <td><b class="${j.violations.length ? "t-red" : ""}">${j.status === "done" ? j.violations.length : "—"}</b></td>
+    <td>${statusPill(j)}</td><td class="t-muted">${ic("chev", 18)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+async function pageOverview() {
+  const [s, js, b] = await Promise.all([api("/api/v1/stats"), api("/api/v1/jobs?limit=8"), api("/api/v1/benchmark").catch(() => ({}))]);
+  const days = s.per_day.map(d => ({ l: new Date(d.date).toLocaleDateString("ru-RU", { weekday: "short" }), v: d.count }));
+  const types = s.by_type.map(([l, v]) => ({ l, v, c: typeColor(l) }));
+  const reviewed = s.with_violations ? (s.confirmed + s.rejected) / s.with_violations : null;
+  return head("Обзор · данные сервиса", "Контроль кассовых операций",
+    "ИИ-анализ видео для соблюдения кассовой дисциплины. Все цифры — реальные анализы этого сервиса.", newBtn) +
+  `<div class="grid g4">
+    ${kpi("Проанализировано видео", s.done, `<b>${s.processing}</b> в обработке · <b>${s.failed}</b> с ошибкой`, "film", "c-red")}
+    ${kpi("Видео с нарушениями", s.with_violations, `<b class="t-red">${s.events}</b> нарушений найдено`, "warn", "c-amber")}
+    ${kpi("Ждут проверки", s.awaiting_review, `<b class="t-red">${s.confirmed}</b> подтверждено · <b>${s.rejected}</b> отклонено`, "help", "c-blue")}
+    ${kpi("Среднее время анализа", fmtSec(s.avg_processing_sec), `лимит жюри — <b>5 мин</b> на видео`, "clock", "c-green")}
+  </div>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="card"><div class="ch"><div><h3>Анализы по дням</h3><div class="sub">Завершённые анализы за 7 дней</div></div></div>
+      ${areaChart(days)}
+      <div style="display:flex;align-items:center;border-top:1px solid var(--line);margin-top:6px;padding-top:14px">
+        <b style="font-size:22px">${days.reduce((a, d) => a + d.v, 0)}</b><span class="t-muted" style="margin-left:8px;flex:1">анализов за неделю</span>
+        ${b.available ? `<a href="#/quality" class="t-green" style="font-weight:650">Точность на открытых роликах: ${pct(b.accuracy)} ›</a>` : ""}</div></div>
+    <div class="card"><div class="ch"><div><h3>Нарушения по типам</h3><div class="sub">По всем завершённым анализам</div></div></div>
+      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">${donut(types, s.events)}
+        <div class="legend">${types.length ? types.map(t => `<div><i style="background:${t.c}"></i><span>${esc(t.l)}</span><b>${t.v}</b></div>`).join("") : '<span class="t-muted">Пока нет нарушений</span>'}</div></div>
+      <a class="sla" href="#/events"><span class="t-green">${ic("shield", 24)}</span><div style="flex:1"><b>${reviewed == null ? "Нет нарушений для проверки" : pct(reviewed) + " нарушений проверено человеком"}</b>
+        <div class="t-muted" style="font-size:12px">Каждое срабатывание подтверждает или отклоняет сотрудник</div></div>${ic("chev")}</a></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="ch"><div><h3>Последние анализы</h3><div class="sub">Загруженные записи и результат проверки</div></div>
+    <a href="#/history" class="t-red" style="font-weight:600">Вся история ›</a></div>${jobsTable(js)}</div>`;
+}
+
+// --- новый анализ ---
+const uploads = [];
+function pageNew() {
+  setTimeout(() => {
+    const dz = $("#drop"), fi = $("#fileIn");
+    dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
+    dz.ondragleave = () => dz.classList.remove("over");
+    dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); [...e.dataTransfer.files].forEach(upload); };
+    fi.onchange = () => [...fi.files].forEach(upload);
+    drawUploads();
+  });
+  return head("Новый анализ", "Загрузить видео", "Видео обрабатывается на этом компьютере. Можно загрузить несколько файлов — они встанут в очередь.") +
+  `<div class="card"><div class="drop" id="drop"><div class="t-red">${ic("up", 34)}</div>
+    <h3 style="margin:10px 0 4px">Перетащите видео сюда</h3><div class="t-muted">.mov, .mp4 — до 5 минут на файл</div>
+    <label class="btn primary" style="margin-top:16px">${ic("video", 18)}Выбрать файлы<input type="file" id="fileIn" accept="video/*,.mov" multiple hidden></label></div>
+    <div id="ups" style="margin-top:18px"></div></div>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card"><h3>1. Кадры и объекты</h3><p class="t-muted">10 кадров/с: деньги, удостоверение, счётчик, сейф, дверь, ноутбук, сумки и люди с трекингом.</p></div>
+    <div class="card"><h3>2. Правила</h3><p class="t-muted">Кто в комнате (отражения в стекле отсекаются), что осталось на столе, открыт ли сейф/дверь.</p></div>
+    <div class="card"><h3>3. Норма и доказательства</h3><p class="t-muted">Ссылка только из справочника норм РК, 1–3 кадра с размытыми лицами, таймкод до 0.1 с.</p></div></div>`;
+}
+function drawUploads() {
+  const el = $("#ups"); if (!el) return;
+  el.innerHTML = uploads.map(u => `<div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--line)">
+    <span class="fi" style="width:34px;height:34px;border-radius:9px;background:var(--red-soft);color:var(--red);display:grid;place-items:center">${ic("video", 17)}</span>
+    <div style="flex:1;min-width:0"><b>${esc(u.name)}</b><div class="t-muted" style="font-size:12px">${esc(u.msg)}</div>
+      <div class="bar" style="margin-top:6px"><i style="width:${Math.round(u.p * 100)}%"></i></div></div>
+    ${u.job && u.done ? `<a class="btn sm" href="#/job/${u.job}">Открыть ${ic("chev", 15)}</a>` : ""}</div>`).join("");
+}
+function upload(file) {
+  const u = { name: file.name, p: 0, msg: "Загрузка…" }; uploads.unshift(u); drawUploads();
+  const fd = new FormData(); fd.append("file", file);
+  const x = new XMLHttpRequest(); x.open("POST", "/api/v1/analyze"); x.setRequestHeader("X-API-Key", KEY);
+  x.upload.onprogress = e => { if (e.lengthComputable) { u.p = .3 * e.loaded / e.total; drawUploads(); } };
+  x.onload = () => {
+    if (x.status === 401) { askKey(); return; }
+    if (x.status !== 200) { u.msg = "Ошибка: " + x.responseText; drawUploads(); return; }
+    u.job = JSON.parse(x.responseText).job_id; u.msg = "В очереди на анализ…"; drawUploads(); poll(u);
+  };
+  x.onerror = () => { u.msg = "Сеть недоступна"; drawUploads(); };
+  x.send(fd);
+}
+async function poll(u) {
+  const t0 = Date.now();
+  while (true) {
+    const j = await api("/api/v1/jobs/" + u.job).catch(() => null);
+    if (j && j.status !== "processing") {
+      u.p = 1; u.done = true;
+      u.msg = j.status === "failed" ? "Ошибка анализа: " + (j.error || "") :
+        j.verdict === "violation" ? `Найдено нарушений: ${j.violations.length} · ${Math.round((Date.now() - t0) / 1000)} с` : "Нарушений не обнаружено";
+      drawUploads(); return;
+    }
+    if (j) { u.p = .3 + .7 * (j.progress || 0); u.msg = `Анализ… ${Math.round((j.progress || 0) * 100)}%`; drawUploads(); }
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
+
+// --- история ---
+let histFilter = "all";
+async function pageHistory(q) {
+  const js = await api("/api/v1/jobs");
+  const F = { all: ["Все", () => true], viol: ["С нарушениями", j => j.verdict === "violation"],
+    review: ["Ждут проверки", j => j.verdict === "violation" && !j.review], clean: ["Без нарушений", j => j.status === "done" && j.verdict !== "violation"],
+    proc: ["В обработке", j => j.status === "processing"], fail: ["Ошибки", j => j.status === "failed"] };
+  const ql = (q || "").toLowerCase();
+  const list = js.filter(F[histFilter][1]).filter(j => !ql || j.file_name.toLowerCase().includes(ql) || j.job_id.includes(ql) ||
+    j.violations.some(v => v.type.toLowerCase().includes(ql)));
+  window.setHist = f => { histFilter = f; route(); };
+  return head("История анализов", "Все загруженные записи", `Всего ${js.length}${ql ? ` · поиск «${esc(q)}»` : ""}`, newBtn) +
+  `<div class="card"><div class="ch"><div class="filters">${Object.entries(F).map(([k, [t, f]]) =>
+    `<button class="${histFilter === k ? "on" : ""}" onclick="setHist('${k}')">${t} · ${js.filter(f).length}</button>`).join("")}</div></div>
+    ${jobsTable(list, "Ничего не найдено")}</div>`;
+}
+
+// --- нарушения ---
+async function pageEvents(q) {
+  const js = await api("/api/v1/jobs");
+  const ql = (q || "").toLowerCase();
+  const ev = js.flatMap(j => j.violations.map(v => ({ ...v, j }))).filter(e => !ql || e.type.toLowerCase().includes(ql) || e.j.file_name.toLowerCase().includes(ql));
+  return head("Нарушения", "Обнаруженные нарушения", "Каждое срабатывание — гипотеза ИИ. Решение принимает сотрудник: подтвердить или отклонить.") +
+  `<div class="card">${ev.length ? `<div class="tbl"><table><thead><tr><th>Тип</th><th>Запись</th><th>Таймкод</th><th>Уверенность</th><th>Статус</th><th></th></tr></thead><tbody>
+  ${ev.map(e => `<tr class="click" onclick="location.hash='#/job/${e.j.job_id}?t=${e.timecode_sec}'">
+    <td><span style="display:inline-flex;align-items:center;gap:9px"><i style="width:10px;height:10px;border-radius:3px;background:${typeColor(e.type)}"></i><b>${esc(e.type)}</b></span></td>
+    <td>${esc(e.j.file_name === "—" ? "Видео " + e.j.job_id : e.j.file_name)}<div class="t-muted" style="font-size:12px">${fmtDate(e.j.created_at)}</div></td>
+    <td><span class="tc">${tc(e.timecode_sec)}</span></td><td>${e.confidence != null ? pct(e.confidence) : "—"}</td>
+    <td>${statusPill(e.j)}</td><td class="t-muted">${ic("chev", 18)}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Нарушений пока нет</div>`}</div>`;
+}
+
+// --- карточка анализа ---
+async function pageJob(id, params) {
+  const [r, all] = await Promise.all([api("/api/v1/jobs/" + id), api("/api/v1/jobs")]);
+  const s = all.find(j => j.job_id === id) || {};
+  const dur = r.meta?.duration_sec || s.duration_sec || 0;
+  const vs = r.violations || [];
+  if (r.status === "processing") setTimeout(() => location.hash.includes(id) && route(), 2000);
+  setTimeout(() => {
+    const v = $("#vid"); if (!v) return;
+    const seek = t => { v.currentTime = Math.max(0, t - 1); v.play().catch(() => {}); };
+    window.seekTo = (t, i) => { seek(t); document.querySelectorAll(".vcard").forEach((c, k) => c.classList.toggle("act", k === i)); };
+    v.ontimeupdate = () => { const c = $("#cur"); if (c && dur) c.style.left = (100 * v.currentTime / dur) + "%"; };
+    if (params.t) v.addEventListener("loadedmetadata", () => seek(+params.t), { once: true });
+    window.saveReview = async d => {
+      await api(`/api/v1/jobs/${id}/review`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision: d, note: $("#note").value, reviewer: store.get("reviewer", "Контроль") }) });
+      route();
+    };
+    window.dlJson = () => { const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(r, null, 2)], { type: "application/json" }));
+      a.download = `analysis_${id}.json`; a.click(); };
+  });
+  const verdict = r.status === "processing" ? `<span class="pill p-blue"><span class="dot"></span>Анализ… ${Math.round((r.progress || 0) * 100)}%</span>` : statusPill({ ...s, ...r, review: s.review });
+  const rev = s.review;
+  return head(`Анализ · id ${id}`, esc(s.file_name && s.file_name !== "—" ? s.file_name : "Видео " + id), `Загружено ${s.created_at ? fmtDate(s.created_at) : "—"} · длительность ${fmtSec(dur)} · время анализа ${fmtSec(r.meta?.processing_sec)}`,
+    `<div class="noprint" style="display:flex;gap:8px"><button class="btn" onclick="dlJson()">${ic("dl", 17)}JSON</button><button class="btn" onclick="print()">${ic("print", 17)}Отчёт</button></div>`) +
+  `<div class="grid g2">
+    <div><div class="card" style="padding:14px"><div class="player"><video id="vid" controls preload="metadata" src="/api/v1/jobs/${id}/video?key=${encodeURIComponent(KEY)}"></video></div>
+      <div class="tline" title="Нарушения на шкале времени">${dur ? vs.map((v, i) => `<span class="mk" style="left:${100 * v.timecode_sec / dur}%" title="${esc(v.type)} · ${tc(v.timecode_sec)}" onclick="seekTo(${v.timecode_sec},${i})"></span>`).join("") : ""}<span class="cur" id="cur"></span></div>
+      <div class="t-muted" style="font-size:12px;margin-top:6px">Красные метки — нарушения. Клик по метке или таймкоду перематывает видео.</div></div>
+      ${r.status === "failed" ? `<div class="card" style="margin-top:18px"><b class="t-red">Ошибка анализа:</b> ${esc(r.error)}</div>` : ""}
+      ${vs.length ? `<div class="card noprint" style="margin-top:18px"><div class="ch"><div><h3>Решение сотрудника</h3><div class="sub">ИИ находит гипотезы — окончательное решение за человеком</div></div>${verdict}</div>
+        <textarea id="note" rows="2" placeholder="Комментарий (необязательно)">${esc(rev?.note || "")}</textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn primary" onclick="saveReview('confirmed')">${ic("check", 17)}Подтвердить нарушение</button>
+          <button class="btn" onclick="saveReview('rejected')">${ic("x", 17)}Ложное срабатывание</button>
+          ${rev ? `<button class="btn" onclick="saveReview(null)">Сбросить</button><span class="t-muted" style="align-self:center;font-size:12px">${esc(rev.reviewer)} · ${fmtDate(rev.at)}</span>` : ""}</div></div>` : ""}
+    </div>
+    <div class="card"><div class="ch"><div><h3>${vs.length ? `Нарушения (${vs.length})` : "Результат"}</h3><div class="sub">${r.status === "done" ? (vs.length ? "Тип, время, норма РК и кадры-доказательства" : "") : ""}</div></div>${verdict}</div>
+      ${r.status === "done" && !vs.length ? `<div class="empty">${ic("shield", 36)}<div style="margin-top:8px">Нарушений кассовой дисциплины не обнаружено</div></div>` : ""}
+      ${vs.map((v, i) => `<div class="vcard">
+        <div style="display:flex;align-items:center;gap:10px"><i style="width:10px;height:10px;border-radius:3px;background:${typeColor(v.type)}"></i><b style="flex:1">${esc(v.type)}</b>
+          <button class="tc" onclick="seekTo(${v.timecode_sec},${i})">${tc(v.timecode_sec)}</button></div>
+        <p style="margin:10px 0 0">${esc(v.description)}</p>
+        ${v.rule ? `<div class="quote">${esc(v.rule)}</div>` : ""}
+        ${v.source ? `<div class="t-muted" style="font-size:12px">Источник: ${esc(v.source)}</div>` : ""}
+        <div class="frames">${(v.evidence_frames || []).map(f => `<figure><img src="data:image/jpeg;base64,${f.image_base64}" onclick="zoom(this.src)" alt="кадр ${f.timestamp_sec} с"><figcaption>${tc(f.timestamp_sec)}</figcaption></figure>`).join("")}</div>
+        ${v.confidence != null ? `<div class="t-muted" style="font-size:12px;margin-top:8px">Уверенность модели: ${pct(v.confidence)}</div>` : ""}</div>`).join("")}
+    </div></div>`;
+}
+window.zoom = src => { $("#layer").innerHTML = `<div class="zoom" onclick="this.remove()"><img src="${src}"></div>`; };
+
+// --- нормативная база ---
+async function pageRules() {
+  const { types } = await api("/api/v1/regulations");
+  const on = types.filter(t => t.enabled).length;
+  return head("Нормативная база", "Нарушения и нормы РК", `Сервис ссылается только на эти нормы — ничего не придумывает. Распознаётся ${on} из ${types.length} типов.`) +
+  `<div class="grid g3">${types.map(t => `<div class="card rule">
+    <div style="display:flex;gap:10px;align-items:flex-start"><b style="flex:1;font-size:15px">${esc(t.name)}</b>
+      ${t.enabled ? '<span class="pill p-green">Распознаётся</span>' : '<span class="pill p-gray">В разработке</span>'}</div>
+    <div class="t-red" style="font-weight:600;font-size:13px;margin-top:8px">${esc(t.act)}, ${esc(t.clause)}</div>
+    <div class="quote">«${esc(t.quote)}»</div>
+    ${t.extra_ref ? `<div style="font-size:12.5px;margin-bottom:6px">${esc(t.extra_ref)}</div>` : ""}
+    <div style="font-size:13px"><span class="t-muted">Что видно на записи:</span> ${esc(t.observable)}</div>
+    ${t.note ? `<div style="font-size:12.5px;margin-top:6px" class="t-amber">${esc(t.note)}</div>` : ""}
+    <div class="meta">${t.videos.length ? "Ролики: " + t.videos.map(esc).join(", ") + " · " : ""}${t.verified ? "цитата сверена" : "цитата не сверена"} ·
+      <a class="t-red" href="${esc(t.url)}" target="_blank" rel="noopener">adilet ${ic("ext", 12)}</a></div></div>`).join("")}</div>`;
+}
+
+// --- качество модели ---
+async function pageQuality() {
+  const b = await api("/api/v1/benchmark");
+  if (!b.available) return head("Качество модели", "Нет данных", "Запустите: python scripts/eval_timelines.py");
+  const n1 = b.tp + b.fn, n0 = b.tn + b.fp;
+  return head("Качество модели", "Проверка на 42 открытых роликах",
+    `Разметка организаторов и таблица команды. Модель: ${esc(b.detector)} · ${fmtDate(b.created_at)}`) +
+  `<div class="grid g4">
+    ${kpi("Точность вердикта", pct(b.accuracy), `${b.tp + b.tn} из ${b.videos} роликов`, "check", "c-green")}
+    ${kpi("Найдено нарушений", `${b.tp} / ${n1}`, `пропущено <b class="t-red">${b.fn}</b>`, "warn", "c-red")}
+    ${kpi("Ложные срабатывания", `${b.fp} / ${n0}`, "на роликах без нарушений", "help", "c-amber")}
+    ${kpi("Ошибка таймкода", b.tc_median != null ? b.tc_median + " с" : "—", `медиана · ≤2 с: <b>${pct(b.tc_within2)}</b> · тип совпал ${b.type_ok}/${b.tp}`, "clock", "c-blue")}
+  </div>
+  <div class="card" style="margin-top:18px"><div class="ch"><div><h3>По роликам</h3>
+    <div class="sub">Пороги правил подбирались на этих же роликах — на новом ракурсе ожидайте ниже. Пропуски — классы, которые ещё размечаются.</div></div></div>
+  <div class="tbl"><table><thead><tr><th>Ролик</th><th>Разметка</th><th>Нарушение по таблице команды</th><th>Нашёл сервис</th><th>Итог</th></tr></thead><tbody>
+  ${b.rows.map(r => { const ok = r.label === r.pred, cls = ok ? "ok-row" : r.pred ? "fp-row" : "bad-row";
+    return `<tr class="${cls}"><td><b>${esc(r.video)}</b></td>
+    <td>${r.label ? `нарушение · ${r.gt_tc} с` : '<span class="t-muted">без нарушений</span>'}</td>
+    <td style="max-width:380px;font-size:12.5px">${esc(r.team_text).slice(0, 160)}${r.team_text.length > 160 ? "…" : ""}</td>
+    <td style="font-size:12.5px">${r.found.map(f => `${esc(f.name)} <span class="tc" style="padding:1px 6px">${f.t} с</span>`).join("<br>") || "—"}</td>
+    <td>${ok ? (r.label ? `<span class="pill p-green">верно · ±${r.tc_err} с</span>` : '<span class="pill p-green">верно</span>') : r.pred ? '<span class="pill p-amber">ложное</span>' : '<span class="pill p-red">пропуск</span>'}</td></tr>`; }).join("")}
+  </tbody></table></div></div>`;
+}
+
+// --- API ---
+function pageApi() {
+  const host = location.origin;
+  window.showKey = () => { $("#kv").textContent = KEY; };
+  return head("API для жюри", "Интеграция", "Формат по разделу 10 ТЗ. Ключ передаётся в заголовке X-API-Key.") +
+  `<div class="grid g2"><div class="card">
+    <h3>1. Отправить видео</h3><pre>curl -X POST ${esc(host)}/api/v1/analyze \\
+  -H "X-API-Key: $API_KEY" -F "file=@video.mov"
+# → {"job_id": "a1b2c3d4", "status": "processing"}</pre>
+    <h3 style="margin-top:20px">2. Получить результат</h3><pre>curl ${esc(host)}/api/v1/jobs/a1b2c3d4 -H "X-API-Key: $API_KEY"</pre>
+    <pre>{"job_id": "a1b2c3d4", "status": "done", "verdict": "violation",
+ "violations": [{"type": "…", "timecode_sec": 13.13, "description": "…",
+   "evidence_frames": [{"timestamp_sec": 13.13, "image_base64": "…"}]}]}</pre></div>
+  <div class="card"><h3>Ключ доступа</h3><div class="sub">Этот же ключ используется панелью</div>
+    <div style="display:flex;gap:8px;align-items:center;margin:12px 0"><code id="kv" style="flex:1;background:#f5f6f8;padding:9px 11px;border-radius:9px">••••••••••••</code>
+      <button class="btn sm" onclick="showKey()">Показать</button></div>
+    <div class="kv"><span>status</span><div>processing · done · failed</div><span>verdict</span><div>violation · no_violation</div>
+      <span>лимит</span><div>5 минут на видео</div><span>лица</span><div>размываются на кадрах-доказательствах</div></div>
+    <a class="btn" style="margin-top:16px" href="/docs" target="_blank">${ic("ext", 16)}Swagger (все эндпоинты)</a></div></div>`;
+}
+
+// ================= маршрутизация =================
+async function route() {
+  if (!KEY) { renderNav(""); askKey(); return; }
+  const [path, qs] = location.hash.replace(/^#\/?/, "").split("?");
+  const [page, arg] = (path || "overview").split("/");
+  const params = Object.fromEntries(new URLSearchParams(qs || ""));
+  const q = $("#q").value.trim();
+  api("/api/v1/stats").then(s => renderNav(page === "job" ? "history" : page, s.awaiting_review)).catch(() => renderNav(page));
+  const view = $("#view");
+  try {
+    const pages = { overview: pageOverview, new: pageNew, history: () => pageHistory(q), events: () => pageEvents(q),
+      job: () => pageJob(arg, params), rules: pageRules, quality: pageQuality, api: pageApi };
+    view.innerHTML = await (pages[page] || pageOverview)();
+  } catch (e) { if (e.message !== "401") view.innerHTML = `<div class="card"><b class="t-red">Ошибка:</b> ${esc(e.message)}</div>`; }
+}
+$("#q").onkeydown = e => { if (e.key === "Enter") { const h = location.hash.startsWith("#/events") ? "#/events" : "#/history"; location.hash === h ? route() : (location.hash = h); } };
+window.onhashchange = route;
+fetch("/health").then(r => r.json()).then(h => { $("#engine").className = "chip ok";
+  $("#engine").innerHTML = `<span class="dot"></span>Локальный ИИ активен${h.detector ? " · " + esc(h.detector) : ""}`; })
+  .catch(() => { $("#engine").className = "chip bad"; $("#engine").innerHTML = '<span class="dot"></span>Сервис недоступен'; });
+route();
+setInterval(() => { if (/^#\/?(overview|history)?$/.test(location.hash) && !document.hidden) route(); }, 15000);
 </script>
 </body>
 </html>

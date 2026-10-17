@@ -40,7 +40,7 @@ def main():
             want.setdefault(vid, set()).add(tid)
     labels = load_labels()
     tp = tn = fp = fn = type_ok = 0
-    errs = []
+    errs, rows = [], []
     for r in labels.itertuples():
         p = WORKDIR / "timelines" / f"{r.key}.json"
         if not p.exists():
@@ -64,12 +64,28 @@ def main():
         else:
             fn += 1; msg = f"❌ пропуск ({','.join(want.get(r.key, ['?']))})"
         found = "; ".join(f"{c.type_id}@{c.t_peak:.1f}" for c in cands)
+        rows.append({"video": r.key, "label": int(r.violation), "pred": pred,
+                     "gt_tc": float(r.timecode_sec) if r.violation else None,
+                     "found": [{"type": c.type_id, "name": types[c.type_id].name, "t": round(c.t_peak, 2)} for c in cands],
+                     "tc_err": round(min(abs(c.t_peak - r.timecode_sec) for c in cands), 2) if (pred and r.violation) else None,
+                     "team_types": sorted(want.get(r.key, [])),
+                     "team_text": team.get(r.key, {}).get("violation", "")})
         print(f"{r.key:5s} gt={'%.0f' % r.timecode_sec if r.violation else '-':>3s}  {msg:40s} {found}")
     n = tp + tn + fp + fn
     print(f"\nAccuracy вердикта {(tp + tn) / n:.3f} ({n} видео) | нашли {tp} из {tp + fn} нарушений | ложных {fp} из {fp + tn}")
     if errs:
         import numpy as np
         print(f"Таймкод: медиана ошибки {np.median(errs):.1f} c, ≤2 c: {np.mean(np.array(errs) <= 2):.0%} | тип совпал {type_ok}/{tp}")
+    import time, os
+    out = WORKDIR / "eval"; out.mkdir(parents=True, exist_ok=True)
+    det = os.getenv("DETECTOR_WEIGHTS", "models/detector/weights/best.pt")
+    summary = {"available": True, "created_at": time.time(), "videos": n, "accuracy": round((tp + tn) / n, 3),
+               "tp": tp, "tn": tn, "fp": fp, "fn": fn, "type_ok": type_ok,
+               "tc_median": round(float(__import__('numpy').median(errs)), 2) if errs else None,
+               "tc_within2": round(float(__import__('numpy').mean(__import__('numpy').array(errs) <= 2)), 2) if errs else None,
+               "detector": det, "rows": rows}
+    (out / "latest.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"Сохранено: {out / 'latest.json'}")
 
 
 if __name__ == "__main__":
