@@ -29,7 +29,7 @@ QUERIES = {
     "phone": (["smartphone", "mobile phone in hand"], 0.25),
     "collector_bag": (["green cash bag", "sealed money bag"], 0.22),
     "personal_item": (["handbag", "jacket", "backpack", "wallet"], 0.25),
-    "food_drink": (["cup", "coffee cup", "bottle", "food"], 0.25),
+    # food_drink отключён: на маленьком видео OWLv2 путал цветные купюры с «food»/«cup»
     "safe_open": (["open safe door", "open metal cabinet"], 0.25),
 }
 

@@ -68,8 +68,8 @@ def yolo_dets(img):
     if "_Y" not in globals():
         _Y = (YOLO(str(ROOT / "models" / "yolo11s.pt")), pick_device())
     m, dev = _Y
-    r = m.predict(np.asarray(img)[:, :, ::-1], imgsz=1280, conf=0.35, classes=[67, 41, 39], device=dev, verbose=False)[0]
-    names = {67: "phone", 41: "food_drink", 39: "food_drink"}
+    r = m.predict(np.asarray(img)[:, :, ::-1], imgsz=1280, conf=0.35, classes=[67], device=dev, verbose=False)[0]
+    names = {67: "phone"}  # стакан/бутылку не ищем: давали ложные срабатывания на деньгах
     return [{"cls": names[c], "score": s, "box": tuple(b)}
             for b, c, s in zip(r.boxes.xyxy.tolist(), r.boxes.cls.int().tolist(), r.boxes.conf.tolist())]
 
