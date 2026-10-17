@@ -13,6 +13,24 @@ make serve                        # http://localhost:8000  (UI)  и  /api/v1/...
 make tunnel                       # публичный URL через cloudflared (для жюри)
 ```
 
+## Работа в команде
+
+Репозиторий приватный. **Видео, разметка организаторов, документ кейса, кадры и веса моделей в git не хранятся**
+(данные можно использовать только в рамках хакатона). Их передаём напрямую: AirDrop, флешка или общий диск команды.
+
+```bash
+git clone https://github.com/pudgenafp/forte-datathon26.git && cd forte-datathon26
+# положить данные организаторов: open/videos/*.mov и open/open_labels.xlsx
+bash setup.sh && source .venv/bin/activate
+pip install -r requirements-ml.txt          # torch + ultralytics (долго при медленном интернете)
+curl -L -o models/yolo11s.pt https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt
+```
+
+Правила:
+- `git pull` перед началом работы; маленькие коммиты; не коммитить данные (`.gitignore` это страхует).
+- Большие изменения — в отдельной ветке → Pull Request → `main`.
+- Разметка ведётся в Label Studio на одном компьютере (см. `annotation/README.md`).
+
 ## Структура
 
 ```
