@@ -19,7 +19,7 @@ make tunnel                       # публичный URL через cloudflare
 (данные можно использовать только в рамках хакатона). Их передаём напрямую: AirDrop, флешка или общий диск команды.
 
 ```bash
-git clone https://github.com/lapatopa/forte-datathon26.git && cd forte-datathon26
+git clone https://github.com/Hotel-zulu/ForteDatathon.git && cd ForteDatathon
 # положить данные организаторов: open/videos/*.mov и open/open_labels.xlsx
 bash setup.sh && source .venv/bin/activate
 pip install -r requirements-ml.txt          # torch + ultralytics (долго при медленном интернете)
