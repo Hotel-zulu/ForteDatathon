@@ -51,7 +51,11 @@ def analyze(video_path: str | Path, with_frames: bool = True, progress=None) -> 
 
     # 1. Покадровое восприятие (с контролем времени — лимит жюри 5 минут на видео)
     timeline, truncated = [], False
-    for t, frame in iter_frames(video_path, config.SAMPLE_FPS, config.MAX_SIDE):
+    # длинное видео — реже кадры, чтобы уложиться в лимит жюри (5 мин); MAX_FRAMES подбирается под железо
+    import os
+    max_frames = int(os.getenv("MAX_FRAMES", "1500"))
+    fps = min(config.SAMPLE_FPS, max(2.0, max_frames / max(meta.duration_sec, 1.0)))
+    for t, frame in iter_frames(video_path, fps, config.MAX_SIDE):
         obs = perception(t, frame)
         timeline.append(obs)
         for d in detectors:

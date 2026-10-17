@@ -14,6 +14,9 @@ def build_perception() -> Perception:
         if kind == "cashier":
             from src.detectors.cashier_perception import CashierPerception
             return CashierPerception()
+        if kind == "rtdetr":   # Apache-2.0, без ultralytics — для финальной сдачи
+            from src.detectors.rtdetr_perception import RTDetrPerception
+            return RTDetrPerception()
         if kind == "yolo":
             from src.detectors.yolo_perception import YoloPerception
             return YoloPerception()
