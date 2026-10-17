@@ -68,8 +68,9 @@ class DepartureDetector(Detector):
             scr = [f.extra.get("screen") for f in sc.frames(w0, w1) if f.extra.get("screen") is not None]
             scr_on = sc.frac("screen_on", w0, w1, conf=0.4)
             scr_lock = sc.frac("screen_locked", w0, w1, conf=0.4)
-            if scr_on >= self.ITEM_FRAC and scr_on > scr_lock or \
-                    (not scr_on and not scr_lock and scr and float(np.median(scr)) >= self.SCREEN_ON):
+            bright = bool(scr) and float(np.median(scr)) >= self.SCREEN_ON
+            # нужны оба признака: модель видит рабочий экран И экран реально светится (экран блокировки тёмный)
+            if (scr_on >= self.ITEM_FRAC and scr_on > scr_lock and bright) or (not scr_on and not scr_lock and bright):
                 found.append(("workstation_unlocked",
                               "экран ноутбука остался включённым с открытой рабочей программой (не заблокирован); "
                               "открытая норма требует автоблокировку, обязанность блокировать при уходе — ВНД банка",

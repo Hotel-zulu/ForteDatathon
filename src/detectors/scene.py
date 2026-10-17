@@ -60,7 +60,7 @@ class Scene:
         # основание двери годится как «линия стекла», только если дверь в глубине кадра (не у камеры)
         self.door_ok = self.door is not None and self.door[3] < 0.8 and \
             (self.door[2] - self.door[0]) * (self.door[3] - self.door[1]) < 0.6
-        raw = [sum(1 for q in f.persons if self.in_room(q)) for f in tl]
+        raw = [len(self.room_persons(f)) for f in tl]
         self.count = self._smooth(raw)
         self._stable = self._stabilize(tl)
 
@@ -87,10 +87,22 @@ class Scene:
             return False
         if not self.door_ok:   # другой ракурс: дверь у камеры или не найдена — фильтр только по размеру
             return y2 - y1 >= 0.12 * self.scale
-        return y2 >= self.door[3] - self.ROOM_MARGIN * self.scale
+        if y2 < self.door[3] - self.ROOM_MARGIN * self.scale:
+            return False
+        # маленькая фигура целиком в проёме двери/стекла — человек за стеклом или отражение
+        if inside_frac(q["xyxy"], self.door) >= 0.8 and y2 - y1 < 0.2 * self.scale:
+            return False
+        return True
 
     def room_persons(self, f: FrameObs) -> list[dict]:
-        return [q for q in f.persons if self.in_room(q)]
+        """Люди в комнате без дублей: рамка, лежащая внутри другой (часть тела / повтор детектора), не считается."""
+        ps = sorted((q for q in f.persons if self.in_room(q)),
+                    key=lambda q: -(q["xyxy"][2] - q["xyxy"][0]) * (q["xyxy"][3] - q["xyxy"][1]))
+        keep = []
+        for q in ps:
+            if all(inside_frac(q["xyxy"], k["xyxy"]) < 0.6 for k in keep):
+                keep.append(q)
+        return keep
 
     def _smooth(self, vals, half: float = 0.5):
         out, j0, j1 = [], 0, 0

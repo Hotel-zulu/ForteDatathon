@@ -43,14 +43,16 @@ def read_names():
 
 class LabelDS(torch.utils.data.Dataset):
     def __init__(self, split, train, limit=None, size=800):
-        self.imgs = sorted((DS / "images" / split).glob("*.jpg"))[:limit]
+        splits = split if isinstance(split, (list, tuple)) else [split]
+        self.imgs = sorted(p for sp in splits for p in (DS / "images" / sp).glob("*.jpg"))[:limit]
         self.train, self.size = train, size
         self.aug = T.Compose([
             T.RandomPhotometricDistort(p=0.8),
             T.RandomZoomOut(fill={tv_tensors.Image: (114, 114, 114), "others": 0}, side_range=(1.0, 1.6), p=0.3),
             T.RandomIoUCrop(min_scale=0.5, sampler_options=[0.3, 0.5, 0.7, 0.9, 1.0]),
             T.RandomHorizontalFlip(),
-            T.RandomAffine(degrees=8, translate=(0.05, 0.05), scale=(0.8, 1.2), shear=4),   # другой ракурс
+            T.RandomAffine(degrees=12, translate=(0.08, 0.08), scale=(0.7, 1.3), shear=6),   # другой ракурс
+            T.RandomPerspective(distortion_scale=0.3, p=0.4),                                 # камера сбоку
             T.SanitizeBoundingBoxes(min_size=2),
         ])
 
@@ -61,7 +63,7 @@ class LabelDS(torch.utils.data.Dataset):
         p = self.imgs[i]
         img = Image.open(p).convert("RGB")
         W, H = img.size
-        lab = (DS / "labels" / p.parent.name / p.with_suffix(".txt").name)
+        lab = (DS / "labels" / p.parent.name / p.with_suffix(".txt").name)   # images/<split>/x.jpg -> labels/<split>/x.txt
         boxes, cls = [], []
         for line in (lab.read_text().split("\n") if lab.exists() else []):
             if not line.strip():
@@ -159,6 +161,8 @@ def main():
     ap.add_argument("--size", type=int, default=800)
     ap.add_argument("--limit", type=int)
     ap.add_argument("--init", help="продолжить с сохранённой модели (например models/rtdetr_cashier)")
+    ap.add_argument("--all", action="store_true", help="финальная модель: val тоже в обучение, сохраняется последняя эпоха")
+    ap.add_argument("--rare-x", type=float, default=3.0, help="во сколько раз чаще показывать кадры с редкими классами")
     a = ap.parse_args()
     from transformers import RTDetrV2ForObjectDetection
 
@@ -173,9 +177,20 @@ def main():
         model = RTDetrV2ForObjectDetection.from_pretrained(
             BASE, num_labels=len(names), id2label=dict(enumerate(names)), label2id={n: i for i, n in enumerate(names)},
             ignore_mismatched_sizes=True).to(dev)
-    tr = LabelDS("train", True, a.limit, a.size)
+    tr = LabelDS(["train", "val"] if a.all else "train", True, a.limit, a.size)
     va = LabelDS("val", False, a.limit, a.size)
-    dl = torch.utils.data.DataLoader(tr, batch_size=a.batch, shuffle=True, collate_fn=collate, num_workers=2, persistent_workers=True)
+    # редкие классы (документы, личные вещи, деньги в счётчике, сумка, открытый сейф, удостоверение) — чаще
+    rare = {names.index(n) for n in ("documents", "personal_item", "cash_in_counter", "collector_bag", "safe_open",
+                                     "id_card", "door_open", "key_in_lock") if n in names}
+    def _w(p):
+        lab = DS / "labels" / p.parent.name / p.with_suffix(".txt").name
+        cls = {int(l.split()[0]) for l in lab.read_text().split("\n") if l.strip()} if lab.exists() else set()
+        return a.rare_x if cls & rare else 1.0
+    weights = [_w(p) for p in tr.imgs]
+    sampler = torch.utils.data.WeightedRandomSampler(weights, num_samples=len(tr), replacement=True)
+    dl = torch.utils.data.DataLoader(tr, batch_size=a.batch, sampler=sampler, collate_fn=collate, num_workers=2,
+                                     persistent_workers=True)
+    print(f"кадров с редкими классами: {sum(w > 1 for w in weights)} из {len(weights)} (×{a.rare_x})", flush=True)
     # persistent_workers: процессы загрузки создаются один раз (не перечитывают скрипт после каждой эпохи)
     dv = torch.utils.data.DataLoader(va, batch_size=a.batch, collate_fn=collate, num_workers=2, persistent_workers=True)
     bb = [p for n, p in model.named_parameters() if "backbone" in n]
@@ -202,7 +217,7 @@ def main():
         log.append({"epoch": ep, "loss": round(tot / len(dl), 4), "map50": round(m, 4), "per_class": per,
                     "sec": round(time.time() - t0)})
         print(f"эпоха {ep}: loss {tot / len(dl):.3f}  val mAP50 {m:.3f}  {per}  ({time.time() - t0:.0f} c)", flush=True)
-        if m > best:
+        if m > best or a.all:   # --all: валидация видела эти кадры, берём последнюю эпоху
             best = m
             model.save_pretrained(OUT)
             print(f"  ✓ сохранено (лучшее {best:.3f})", flush=True)
