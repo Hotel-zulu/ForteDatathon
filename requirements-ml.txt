@@ -1,5 +1,7 @@
 # Модели (ставить по мере выбора подхода). ПРОВЕРЯЙТЕ ЛИЦЕНЗИЮ каждой модели/весов!
-# ⚠ ultralytics (YOLOv8/11) — AGPL-3.0: по FAQ п.24 рискованно. Предпочтительны Apache-2.0 / MIT.
+# ⚠ ultralytics (YOLOv8/11) — AGPL-3.0: для исследования ОК, к финалу заменить на Apache-2.0 / MIT.
+ultralytics>=8.3
+lap>=0.5
 torch>=2.2
 torchvision>=0.17
 transformers>=4.45       # RT-DETR / D-FINE / Grounding DINO / VLM (Apache-2.0)

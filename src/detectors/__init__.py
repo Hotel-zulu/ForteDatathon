@@ -4,8 +4,18 @@ from src.detectors.examples import LeavingWorkplaceDetector, NullPerception, Pho
 
 
 def build_perception() -> Perception:
-    # TODO: заменить на реальный модуль: детектор людей/предметов (Apache-2.0: RT-DETR / D-FINE / YOLOX)
-    #       + трекинг (ByteTrack) + поза (RTMPose). Веса — в models/, без интернета.
+    """PERCEPTION=yolo (по умолчанию, если установлен ultralytics) | null.
+
+    TODO к финалу: Apache-2.0 детектор (RT-DETR / D-FINE) + поза (RTMPose). Веса — в models/, офлайн.
+    """
+    import os
+    kind = os.getenv("PERCEPTION", "yolo")
+    if kind == "yolo":
+        try:
+            from src.detectors.yolo_perception import YoloPerception
+            return YoloPerception()
+        except ImportError:
+            print("[perception] ultralytics не установлен — использую заглушку")
     return NullPerception()
 
 

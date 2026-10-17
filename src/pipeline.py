@@ -15,6 +15,17 @@ from src.evidence import make_evidence
 from src.video_io import iter_frames, probe
 
 
+_PERCEPTION = None
+
+
+def _perception():
+    """Модель грузится один раз на процесс (а не на каждое видео)."""
+    global _PERCEPTION
+    if _PERCEPTION is None:
+        _PERCEPTION = build_perception()
+    return _PERCEPTION
+
+
 def _dedup(cands: list[Candidate], gap: float = 3.0) -> list[Candidate]:
     """Одинаковый тип в пределах gap секунд — одно событие (лучшее по уверенности)."""
     out: list[Candidate] = []
@@ -33,7 +44,8 @@ def analyze(video_path: str | Path, with_frames: bool = True, progress=None) -> 
     t0 = time.time()
     video_path = str(video_path)
     meta = probe(video_path)
-    perception, detectors, verifier = build_perception(), build_detectors(), build_verifier()
+    perception, detectors, verifier = _perception(), build_detectors(), build_verifier()
+    getattr(perception, "reset", lambda: None)()
     for d in detectors:
         d.reset()
 
