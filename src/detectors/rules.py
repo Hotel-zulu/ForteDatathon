@@ -203,27 +203,34 @@ class DoorLeftOpen(Detector):
 
 
 class NoIdentification(Detector):
-    """Клиент/инкассатор обслужен (на столе деньги или сумка), а удостоверение за визит ни разу не появилось."""
+    """Инкассатор с сумкой обслужен, а удостоверение за все его визиты так и не появилось.
+    Только визиты инкассатора: у обычных клиентов на части ракурсов удостоверение не видно, а инкассатор
+    предъявляет удостоверение/доверенность всегда (X-16 — предъявил, X-17 — нет). Визиты одного инкассатора
+    считаются вместе (трекер может разрезать визит на части)."""
     type_id = "no_client_identification"
-    MIN_VISIT, ID_CONF, MIN_ID_FRAMES, AT = 5.0, 0.35, 3, 5.0
+    MIN_VISIT, ID_CONF, BAG_CONF, MIN_BAG, AT = 4.0, 0.35, 0.5, 20, 5.0
 
     def finalize(self, tl):
         if not tl:
             return []
         sc = Scene(tl)
-        out = []
+        coll, bag_total, id_total = [], 0, 0
         for a, b in sc.visits(self.MIN_VISIT):
             fs = sc.frames(a - 2, b + 2)
-            n_id = sum(1 for f in fs if sc.has(f, "id_card", self.ID_CONF))
-            money = sum(1 for f in fs if sc.has(f, "cash") or sc.has(f, "collector_bag", 0.3))
-            if n_id < self.MIN_ID_FRAMES and money >= 5:
-                tp = a + min(self.AT, (b - a) / 2)
-                out.append(Candidate(self.type_id, a, b, t_peak=tp, confidence=0.6,
-                                     observed=f"С {a:.1f} по {b:.1f} c у кассы клиент, идёт операция с наличными/сумкой, "
-                                              f"но удостоверение личности кассиру не предъявляется",
-                                     evidence_ts=[round(tp, 2), round((a + b) / 2, 2)]))
-        return out
-
+            bag = sum(1 for f in fs if sc.has(f, "collector_bag", self.BAG_CONF))
+            if bag >= self.MIN_BAG:
+                coll.append((a, b))
+                bag_total += bag
+                id_total += sum(1 for f in fs if sc.has(f, "id_card", self.ID_CONF))
+        if not coll or id_total >= max(10, 0.05 * bag_total):
+            return []
+        a, b = coll[0]
+        tp = a + min(self.AT, (b - a) / 2)
+        return [Candidate(self.type_id, a, coll[-1][1], t_peak=tp, confidence=0.6,
+                          observed=f"С {a:.1f} c у кассы инкассатор с сумкой, операция идёт, но удостоверение "
+                                   f"личности кассиру не предъявляется",
+                          boxes=_box(sc.best("collector_bag", a, b)[1], "collector_bag"),
+                          evidence_ts=[round(tp, 2), round((a + b) / 2, 2)])]
 
 # ======================= правила на новых классах (разметка 18.10) =======================
 
