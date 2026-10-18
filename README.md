@@ -11,8 +11,8 @@
 
 | | |
 |---|---|
-| **Web interface URL** | `https://anniversary-convergence-democrat-pond.trycloudflare.com` |
-| **API base URL** | `https://anniversary-convergence-democrat-pond.trycloudflare.com` |
+| **Web interface URL** | `https://developer-firewire-organizations-furnished.trycloudflare.com` |
+| **API base URL** | `https://developer-firewire-organizations-furnished.trycloudflare.com` |
 | **API key** | передан в форме сдачи (заголовок `X-API-Key`) |
 | Документация API (Swagger) | `<API base URL>/docs` |
 | Проверка, что сервис жив | `<API base URL>/health` |
@@ -33,7 +33,7 @@
 ### 1.2. Через API (формат по разделу 10 ТЗ)
 
 ```bash
-export API=https://anniversary-convergence-democrat-pond.trycloudflare.com
+export API=https://developer-firewire-organizations-furnished.trycloudflare.com
 export KEY=<API key>
 
 # 1) отправить видео -> job_id
