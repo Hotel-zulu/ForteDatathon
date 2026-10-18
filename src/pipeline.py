@@ -40,6 +40,28 @@ def _dedup(cands: list[Candidate], gap: float = 3.0) -> list[Candidate]:
     return sorted(out, key=lambda c: c.t_peak)
 
 
+def _vision(timeline) -> list:
+    """Что видела модель на каждом кадре — для режима «Как видит ИИ» в веб-панели.
+    Люди помечаются: в комнате (учитываются правилами) или за стеклом/отражение (отброшены)."""
+    try:
+        from src.detectors.scene import Scene
+        sc = Scene(timeline)
+        room = {id(f): {id(q) for q in sc.room_persons(f)} for f in timeline}
+        out = []
+        for f in timeline:
+            st = sc._stable.get(id(f), {})
+            out.append({"t": round(f.t, 2),
+                        "o": [[o["cls"], round(o["conf"], 2), [round(v, 3) for v in o["xyxy"]]]
+                              for o in f.objects if o["conf"] >= 0.35 and o["cls"] in st],
+                        "p": [[1 if id(q) in room[id(f)] else 0, [round(v, 3) for v in q["xyxy"]]]
+                              for q in f.persons if q.get("conf", 1) >= 0.35],
+                        "n": len(room[id(f)])})
+        return out
+    except Exception as e:  # noqa: BLE001
+        print(f"[pipeline] vision: {e}")
+        return []
+
+
 def _evidence(video_path, c):
     """1–3 кадра; если отрисовка рамок упала — хотя бы кадр на таймкоде (формат ТЗ требует ≥1)."""
     try:
@@ -117,6 +139,7 @@ def analyze(video_path: str | Path, with_frames: bool = True, progress=None) -> 
     return {
         "verdict": "violation" if violations else "no_violation",
         "violations": violations,
+        "_vision": _vision(timeline),
         "_meta": {"duration_sec": round(meta.duration_sec, 2), "fps": meta.fps, "frames_analyzed": len(timeline),
                   "processing_sec": round(time.time() - t0, 2), "truncated": truncated},
     }

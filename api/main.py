@@ -75,6 +75,7 @@ def _job_dir(job_id: str) -> Path:
 def _run(job_id: str, video: Path):
     try:
         res = analyze(video, progress=lambda p: _progress.__setitem__(job_id, p))
+        _write(JOBS_DIR / job_id / "vision.json", {"frames": res.pop("_vision", [])})
         _save(job_id, {"job_id": job_id, "status": "done", "verdict": res["verdict"],
                        "violations": res["violations"], "meta": res["_meta"]})
     except Exception as e:  # noqa: BLE001
@@ -200,6 +201,12 @@ def job_video(job_id: str):
     if not vids:
         raise HTTPException(404, "Видео не сохранено")
     return FileResponse(vids[0])
+
+
+@app.get("/api/v1/jobs/{job_id}/vision", dependencies=[Depends(require_key)])
+def job_vision(job_id: str):
+    """Покадровые детекции модели (режим «Как видит ИИ» в панели)."""
+    return _read(_job_dir(job_id) / "vision.json", {"frames": []})
 
 
 @app.get("/api/v1/regulations", dependencies=[Depends(require_key)])

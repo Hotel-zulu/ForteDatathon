@@ -407,6 +407,48 @@ async function pageJob(id, params) {
     window.seekTo = (t, i) => { seek(t); document.querySelectorAll(".vcard").forEach((c, k) => c.classList.toggle("act", k === i)); };
     v.ontimeupdate = () => { const c = $("#cur"); if (c && dur) c.style.left = (100 * v.currentTime / dur) + "%"; };
     if (params.t) v.addEventListener("loadedmetadata", () => seek(+params.t), { once: true });
+    // ---- «Как видит ИИ»: рамки модели поверх видео, синхронно с воспроизведением ----
+    const cv = $("#ov"), ctx = cv.getContext("2d");
+    const RU = { cash: "деньги", cash_in_counter: "деньги в счётчике", id_card: "удостоверение", phone: "телефон",
+      banknote_counter: "счётчик банкнот", laptop: "ноутбук", screen_on: "экран: программа", screen_locked: "экран: блокировка",
+      safe_closed: "сейф закрыт", safe_open: "сейф открыт", key_in_lock: "ключ в замке", door_closed: "дверь закрыта",
+      door_open: "дверь открыта", collector_bag: "сумка инкассатора", personal_item: "личная вещь", documents: "документы" };
+    const COL = { cash: "#22c55e", cash_in_counter: "#16a34a", id_card: "#facc15", phone: "#ef4444", banknote_counter: "#a855f7",
+      laptop: "#3b82f6", screen_on: "#38bdf8", screen_locked: "#6366f1", safe_closed: "#9ca3af", safe_open: "#ec4899",
+      key_in_lock: "#fde047", door_closed: "#14b8a6", door_open: "#f97316", collector_bag: "#84cc16", personal_item: "#b45309", documents: "#e5e7eb" };
+    let vis = [];
+    api(`/api/v1/jobs/${id}/vision`).then(r => { vis = r.frames || []; }).catch(() => {});
+    const near = t => { let lo = 0, hi = vis.length - 1; if (hi < 0) return null;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (vis[m].t < t) lo = m + 1; else hi = m; }
+      const c = vis[lo], p = vis[Math.max(0, lo - 1)]; const f = Math.abs(p.t - t) < Math.abs(c.t - t) ? p : c;
+      return Math.abs(f.t - t) < 0.6 ? f : null; };
+    const draw = () => {
+      if (!document.body.contains(v)) return;
+      const ew = v.clientWidth, eh = v.clientHeight, dpr = window.devicePixelRatio || 1;
+      if (cv.width !== ew * dpr || cv.height !== eh * dpr) { cv.width = ew * dpr; cv.height = eh * dpr; cv.style.width = ew + "px"; cv.style.height = eh + "px"; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, ew, eh);
+      const f = $("#aiv")?.checked && v.videoWidth ? near(v.currentTime) : null;
+      if (f) {
+        const sc = Math.min(ew / v.videoWidth, (eh - 0) / v.videoHeight), dw = v.videoWidth * sc, dh = v.videoHeight * sc;
+        const ox = (ew - dw) / 2, oy = (eh - dh) / 2, R = b => [ox + b[0] * dw, oy + b[1] * dh, (b[2] - b[0]) * dw, (b[3] - b[1]) * dh];
+        ctx.font = "600 11px -apple-system,Segoe UI,sans-serif"; ctx.lineWidth = 2;
+        for (const [inr, b] of f.p) { const [x, y, w, h] = R(b);
+          ctx.setLineDash(inr ? [] : [5, 4]); ctx.strokeStyle = inr ? "#4ade80" : "rgba(200,200,200,.75)"; ctx.strokeRect(x, y, w, h);
+          ctx.setLineDash([]); const t = inr ? "человек" : "за стеклом"; ctx.fillStyle = inr ? "#4ade80" : "rgba(160,160,160,.9)";
+          ctx.fillRect(x, y - 15, ctx.measureText(t).width + 8, 15); ctx.fillStyle = "#000"; ctx.fillText(t, x + 4, y - 4); }
+        for (const [c, p, b] of f.o) { const [x, y, w, h] = R(b), col = COL[c] || "#fff";
+          ctx.strokeStyle = col; ctx.strokeRect(x, y, w, h); const t = `${RU[c] || c} ${Math.round(p * 100)}%`;
+          ctx.fillStyle = col; ctx.fillRect(x, y + h, ctx.measureText(t).width + 8, 15); ctx.fillStyle = "#000"; ctx.fillText(t, x + 4, y + h + 11); }
+        const hit = vs.find(z => Math.abs(z.timecode_sec - v.currentTime) < 1.5);
+        ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(ox + 8, oy + 8, 190, 22); ctx.fillStyle = "#fff";
+        ctx.fillText(`ИИ · ${tc(v.currentTime)} · в комнате: ${f.n}`, ox + 14, oy + 23);
+        if (hit) { const t = "⚠ " + hit.type; ctx.font = "700 13px -apple-system,Segoe UI,sans-serif";
+          const w = Math.min(dw - 16, ctx.measureText(t).width + 16); ctx.fillStyle = "rgba(212,42,42,.92)"; ctx.fillRect(ox + 8, oy + dh - 38, w, 28);
+          ctx.fillStyle = "#fff"; ctx.fillText(t, ox + 16, oy + dh - 19, w - 16); }
+      }
+      requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
     window.saveReview = async d => {
       await api(`/api/v1/jobs/${id}/review`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision: d, note: $("#note").value, reviewer: store.get("reviewer", "Контроль") }) });
@@ -421,9 +463,11 @@ async function pageJob(id, params) {
   return head(`Анализ · id ${id}`, esc(s.file_name && s.file_name !== "—" ? s.file_name : "Видео " + id), `Загружено ${s.created_at ? fmtDate(s.created_at) : "—"} · длительность ${fmtSec(dur)} · время анализа ${fmtSec(r.meta?.processing_sec)}`,
     `<div class="noprint" style="display:flex;gap:8px"><button class="btn" onclick="dlJson()">${ic("dl", 17)}JSON</button><button class="btn" onclick="print()">${ic("print", 17)}Отчёт</button></div>`) +
   `<div class="grid g2">
-    <div><div class="card" style="padding:14px"><div class="player"><video id="vid" controls preload="metadata" src="/api/v1/jobs/${id}/video?key=${encodeURIComponent(KEY)}"></video></div>
+    <div><div class="card" style="padding:14px"><div class="player" id="pl"><video id="vid" controls playsinline preload="metadata" src="/api/v1/jobs/${id}/video?key=${encodeURIComponent(KEY)}"></video><canvas id="ov" style="position:absolute;left:0;top:0;pointer-events:none"></canvas></div>
       <div class="tline" title="Нарушения на шкале времени">${dur ? vs.map((v, i) => `<span class="mk" style="left:${100 * v.timecode_sec / dur}%" title="${esc(v.type)} · ${tc(v.timecode_sec)}" onclick="seekTo(${v.timecode_sec},${i})"></span>`).join("") : ""}<span class="cur" id="cur"></span></div>
-      <div class="t-muted" style="font-size:12px;margin-top:6px">Красные метки — нарушения. Клик по метке или таймкоду перематывает видео.</div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <label style="display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer"><input type="checkbox" id="aiv" checked> Как видит ИИ</label>
+        <span class="t-muted" style="font-size:12px;flex:1">Рамки — что модель нашла на кадре. Серые пунктирные люди — за стеклом / отражения, правила их не учитывают. Красные метки на шкале — нарушения.</span></div></div>
       ${r.status === "failed" ? `<div class="card" style="margin-top:18px"><b class="t-red">Ошибка анализа:</b> ${esc(r.error)}</div>` : ""}
       ${vs.length ? `<div class="card noprint" style="margin-top:18px"><div class="ch"><div><h3>Решение сотрудника</h3><div class="sub">ИИ находит гипотезы — окончательное решение за человеком</div></div>${verdict}</div>
         <textarea id="note" rows="2" placeholder="Комментарий (необязательно)">${esc(rev?.note || "")}</textarea>
