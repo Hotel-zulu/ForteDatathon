@@ -530,15 +530,19 @@ function pageApi() {
     <h3>1. Отправить видео</h3><pre>curl -X POST ${esc(host)}/api/v1/analyze \\
   -H "X-API-Key: $API_KEY" -F "file=@video.mov"
 # → {"job_id": "a1b2c3d4", "status": "processing"}</pre>
-    <h3 style="margin-top:20px">2. Получить результат</h3><pre>curl ${esc(host)}/api/v1/jobs/a1b2c3d4 -H "X-API-Key: $API_KEY"</pre>
+    <h3 style="margin-top:20px">2. Получить результат</h3><pre>curl ${esc(host)}/api/v1/jobs/a1b2c3d4 \\
+  -H "X-API-Key: $API_KEY"
+# пока обработка идёт: {"status": "processing", "progress": 0.42}</pre>
     <pre>{"job_id": "a1b2c3d4", "status": "done", "verdict": "violation",
  "violations": [{"type": "…", "timecode_sec": 13.13, "description": "…",
-   "evidence_frames": [{"timestamp_sec": 13.13, "image_base64": "…"}]}]}</pre></div>
+   "evidence_frames": [{"timestamp_sec": 13.13, "image_base64": "…"}],
+   "rule": "п. 20: …", "source": "Постановление НБРК № 231 …", "confidence": 0.7}]}</pre>
+    <p class="t-muted" style="margin-top:10px">Поля <code>rule</code>, <code>source</code>, <code>confidence</code> — дополнительные: пункт нормы РК, документ и уверенность. Обязательная схема ТЗ не нарушается.</p></div>
   <div class="card"><h3>Ключ доступа</h3><div class="sub">Этот же ключ используется панелью</div>
     <div style="display:flex;gap:8px;align-items:center;margin:12px 0"><code id="kv" style="flex:1;background:#f5f6f8;padding:9px 11px;border-radius:9px">••••••••••••</code>
       <button class="btn sm" onclick="showKey()">Показать</button></div>
     <div class="kv"><span>status</span><div>processing · done · failed</div><span>verdict</span><div>violation · no_violation</div>
-      <span>лимит</span><div>5 минут на видео</div><span>лица</span><div>размываются на кадрах-доказательствах</div></div>
+      <span>формат</span><div>.mov (также .mp4), поле file</div><span>без ключа</span><div>401 — запрос отклоняется</div><span>лимит</span><div>ответ за 5 минут на видео</div><span>лица</span><div>не распознаются; на кадрах-доказательствах размываются</div></div>
     <a class="btn" style="margin-top:16px" href="/docs" target="_blank">${ic("ext", 16)}Swagger (все эндпоинты)</a></div></div>`;
 }
 
