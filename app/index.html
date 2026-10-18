@@ -177,7 +177,7 @@ const ic = (n, w = 19) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" f
 
 const NAV = [
   ["overview", "Обзор", "overview"], ["new", "Новый анализ", "video"], ["history", "История анализов", "history"],
-  ["events", "Нарушения", "flag", "cnt"], ["rules", "Нормативная база", "book"], ["quality", "Качество модели", "chart"],
+  ["events", "Нарушения", "flag", "cnt"], ["rules", "Нормативная база", "book"],
   ["api", "API для жюри", "code"],
 ];
 function renderNav(active, cnt) {
@@ -278,7 +278,7 @@ function jobsTable(js, empty = "Анализов пока нет — загру�
 }
 
 async function pageOverview() {
-  const [s, js, b] = await Promise.all([api("/api/v1/stats"), api("/api/v1/jobs?limit=8"), api("/api/v1/benchmark").catch(() => ({}))]);
+  const [s, js] = await Promise.all([api("/api/v1/stats"), api("/api/v1/jobs?limit=8")]);
   const days = s.per_day.map(d => ({ l: new Date(d.date).toLocaleDateString("ru-RU", { weekday: "short" }), v: d.count }));
   const types = s.by_type.map(([l, v]) => ({ l, v, c: typeColor(l) }));
   const reviewed = s.with_violations ? (s.confirmed + s.rejected) / s.with_violations : null;
@@ -295,7 +295,7 @@ async function pageOverview() {
       ${areaChart(days)}
       <div style="display:flex;align-items:center;border-top:1px solid var(--line);margin-top:6px;padding-top:14px">
         <b style="font-size:22px">${days.reduce((a, d) => a + d.v, 0)}</b><span class="t-muted" style="margin-left:8px;flex:1">анализов за неделю</span>
-        ${b.available ? `<a href="#/quality" class="t-green" style="font-weight:650">Точность на открытых роликах: ${pct(b.accuracy)} ›</a>` : ""}</div></div>
+</div></div>
     <div class="card"><div class="ch"><div><h3>Нарушения по типам</h3><div class="sub">По всем завершённым анализам</div></div></div>
       <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">${donut(types, s.events)}
         <div class="legend">${types.length ? types.map(t => `<div><i style="background:${t.c}"></i><span>${esc(t.l)}</span><b>${t.v}</b></div>`).join("") : '<span class="t-muted">Пока нет нарушений</span>'}</div></div>
@@ -447,18 +447,16 @@ window.zoom = src => { $("#layer").innerHTML = `<div class="zoom" onclick="this.
 
 // --- нормативная база ---
 async function pageRules() {
-  const { types } = await api("/api/v1/regulations");
-  const on = types.filter(t => t.enabled).length;
-  return head("Нормативная база", "Нарушения и нормы РК", `Сервис ссылается только на эти нормы — ничего не придумывает. Распознаётся ${on} из ${types.length} типов.`) +
+  const types = (await api("/api/v1/regulations")).types.filter(t => t.enabled);
+  return head("Нормативная база", "Нарушения и нормы РК", "Сервис ссылается только на эти нормы — ничего не придумывает. Цитаты дословные, сверены с текстами актов.") +
   `<div class="grid g3">${types.map(t => `<div class="card rule">
-    <div style="display:flex;gap:10px;align-items:flex-start"><b style="flex:1;font-size:15px">${esc(t.name)}</b>
-      ${t.enabled ? '<span class="pill p-green">Распознаётся</span>' : '<span class="pill p-gray">В разработке</span>'}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start"><b style="flex:1;font-size:15px">${esc(t.name)}</b></div>
     <div class="t-red" style="font-weight:600;font-size:13px;margin-top:8px">${esc(t.act)}, ${esc(t.clause)}</div>
     <div class="quote">«${esc(t.quote)}»</div>
     ${t.extra_ref ? `<div style="font-size:12.5px;margin-bottom:6px">${esc(t.extra_ref)}</div>` : ""}
     <div style="font-size:13px"><span class="t-muted">Что видно на записи:</span> ${esc(t.observable)}</div>
     ${t.note ? `<div style="font-size:12.5px;margin-top:6px" class="t-amber">${esc(t.note)}</div>` : ""}
-    <div class="meta">${t.videos.length ? "Ролики: " + t.videos.map(esc).join(", ") + " · " : ""}${t.verified ? "цитата сверена" : "цитата не сверена"} ·
+    <div class="meta">${t.verified ? "цитата сверена" : ""} ·
       <a class="t-red" href="${esc(t.url)}" target="_blank" rel="noopener">adilet ${ic("ext", 12)}</a></div></div>`).join("")}</div>`;
 }
 
