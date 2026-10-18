@@ -307,27 +307,61 @@ class NotCountedToSafe(Detector):
         return out
 
 
+# Зона счётчика: рамка счётчика, продлённая вверх на ZONE_UP его высоты и в стороны на ZONE_SIDE ширины.
+# При пересчёте кассир держит и закладывает пачку над лотком, а не внутри рамки. Масштаб — от самого
+# счётчика, поэтому от ракурса не зависит. Плато качества: ZONE_UP 1.5–2.5 (17/22, 0 ложных), берём середину.
+ZONE_UP, ZONE_SIDE = 2.0, 0.3
+
+
+def _over_counter(sc: Scene, f: FrameObs) -> bool:
+    """Деньги проходят через счётчик: класс cash_in_counter или центр пачки в зоне над/у счётчика
+    (рамка счётчика, продлённая вверх на ZONE_UP его высоты и в стороны на ZONE_SIDE ширины)."""
+    if sc.has(f, "cash_in_counter", 0.35):
+        return True
+    k = sc.counter
+    if k is None:
+        return False
+    h, w = k[3] - k[1], k[2] - k[0]
+    x0, y0, x1, y1 = k[0] - ZONE_SIDE * w, k[1] - ZONE_UP * h, k[2] + ZONE_SIDE * w, k[3]
+    for o in f.objects:
+        if o["cls"] == "cash" and o["conf"] >= 0.35:
+            bb = o["xyxy"]
+            cx, cy = (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2
+            if x0 <= cx <= x1 and y0 <= cy <= y1:
+                return True
+    return False
+
+
 class NoMachineCheck(Detector):
-    """Кассир долго работает с наличными, но ни разу не использует счётчик-детектор банкнот."""
+    """Кассир долго работает с наличными, но пачка ни разу не проходит через зону счётчика банкнот.
+    Если после этого открывается сейф — таймкод = момент, когда деньги убирают в сейф (X-13)."""
     type_id = "no_authenticity_check"
-    MIN_CASH = 5.0
+    MIN_CASH, SAFE_AFTER = 5.0, 10.0
 
     def finalize(self, tl):
         if not tl:
             return []
         sc = Scene(tl)
-        if any(_counting(sc, f) for f in tl):
+        if sc.counter is None or any(_over_counter(sc, f) for f in tl):
             return []
         runs = segments(sc.ts, [sc.has(f, "cash") for f in tl], 1.0, 0.6)
-        total = sum(b - a for a, b in runs)
-        if total < self.MIN_CASH:
+        if sum(b - a for a, b in runs) < self.MIN_CASH:
             return []
         a, b = max(runs, key=lambda r: r[1] - r[0])
-        tp = (a + b) / 2
-        return [Candidate(self.type_id, a, b, t_peak=tp, confidence=0.5,
-                          observed=f"С {a:.1f} по {b:.1f} c кассир работает с наличными вручную; счётчик банкнот "
-                                   f"(проверка подлинности на оборудовании) не используется",
-                          boxes=_box(sc.best("cash", a, b)[1], "cash"), evidence_ts=[round(tp, 2)])]
+        safe = [s0 for s0, s1 in segments(sc.ts, [sc.has(f, "safe_open") for f in tl], 1.0, 0.3)
+                if b - 2.0 <= s0 <= b + self.SAFE_AFTER]
+        if safe:
+            tp = safe[0]
+            obs = (f"С {a:.1f} по {b:.1f} c кассир работает с наличными, пачка ни разу не проходит через счётчик "
+                   f"банкнот; около {tp:.1f} c деньги убираются в сейф без пересчёта и проверки на оборудовании")
+            ev = [round(tp, 2), round((a + b) / 2, 2)]
+        else:
+            tp = (a + b) / 2
+            obs = (f"С {a:.1f} по {b:.1f} c кассир работает с наличными вручную; пачка ни разу не проходит через "
+                   f"счётчик банкнот (проверка подлинности на оборудовании не проводится)")
+            ev = [round(tp, 2)]
+        return [Candidate(self.type_id, a, max(b, tp), t_peak=tp, confidence=0.5, observed=obs,
+                          boxes=_box(sc.best("cash", a, b)[1], "cash"), evidence_ts=ev)]
 
 
 class ClientLeftEarly(Detector):
