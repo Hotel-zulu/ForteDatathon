@@ -9,6 +9,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import shutil
 import sys
@@ -22,7 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
-from fastapi import Body, Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
+from fastapi import Body, Cookie, Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -42,10 +44,19 @@ _lock = threading.Lock()
 _progress: dict[str, float] = {}
 
 
-def require_key(x_api_key: str | None = Header(default=None), key: str | None = Query(default=None)):
-    # ?key= нужен только тегу <video> в панели (он не умеет слать заголовки)
-    if config.API_KEY not in (x_api_key, key):
-        raise HTTPException(401, "Неверный или отсутствующий X-API-Key")
+# Веб-панель открывается без ввода ключа: при загрузке страницы сервер ставит HttpOnly-cookie,
+# производную от API_KEY. Внешние запросы (curl, скрипты жюри) cookie не имеют — им нужен X-API-Key.
+PANEL_COOKIE = "cc_panel"
+PANEL_TOKEN = hmac.new(config.API_KEY.encode(), b"web-panel", hashlib.sha256).hexdigest()
+
+
+def require_key(x_api_key: str | None = Header(default=None), key: str | None = Query(default=None),
+                cc_panel: str | None = Cookie(default=None)):
+    if config.API_KEY in (x_api_key, key):
+        return
+    if cc_panel and hmac.compare_digest(cc_panel, PANEL_TOKEN):
+        return
+    raise HTTPException(401, "Неверный или отсутствующий X-API-Key")
 
 
 def _read(p: Path, default=None):
@@ -235,4 +246,6 @@ UI = ROOT / "app" / "index.html"
 
 @app.get("/")
 def index():
-    return FileResponse(UI)
+    r = FileResponse(UI, headers={"Cache-Control": "no-store"})
+    r.set_cookie(PANEL_COOKIE, PANEL_TOKEN, httponly=True, samesite="strict", max_age=7 * 24 * 3600)
+    return r

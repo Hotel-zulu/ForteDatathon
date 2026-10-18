@@ -183,20 +183,20 @@ function renderNav(active, cnt) {
 
 // --- API ---
 async function api(path, opts = {}) {
-  const r = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), "X-API-Key": KEY } });
+  const h = { ...(opts.headers || {}) }; if (KEY) h["X-API-Key"] = KEY;
+  const r = await fetch(path, { ...opts, headers: h, credentials: "same-origin" });
   if (r.status === 401) { askKey(); throw new Error("401"); }
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
   return r.json();
 }
 function askKey(msg) {
+  // ключ не вводится вручную: доступ даёт cookie, которую сервер ставит при открытии страницы
   if ($("#keybox")) return;
+  store.set("apiKey", ""); KEY = "";
   $("#layer").innerHTML = `<div class="modal" id="keybox"><div class="box">
-    <h3 style="margin:0 0 6px">Вход в панель</h3>
-    <p class="t-muted" style="margin:0 0 14px">Введите API-ключ сервиса (тот же, что для жюри, заголовок X-API-Key). Хранится только в этом браузере.</p>
-    <input type="password" id="keyin" placeholder="API-ключ" value="${esc(KEY)}">
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn primary" id="keyok">Войти</button></div></div></div>`;
-  const go = () => { KEY = $("#keyin").value.trim(); store.set("apiKey", KEY); $("#layer").innerHTML = ""; route(); };
-  $("#keyok").onclick = go; $("#keyin").onkeydown = e => e.key === "Enter" && go(); $("#keyin").focus();
+    <h3 style="margin:0 0 6px">Сессия устарела</h3>
+    <p class="t-muted" style="margin:0 0 14px">Обновите страницу — доступ восстановится автоматически.</p>
+    <div style="display:flex;justify-content:flex-end"><button class="btn primary" onclick="location.reload()">Обновить</button></div></div></div>`;
 }
 
 // --- форматирование ---
@@ -330,7 +330,7 @@ function drawUploads() {
 function upload(file) {
   const u = { name: file.name, p: 0, msg: "Загрузка…" }; uploads.unshift(u); drawUploads();
   const fd = new FormData(); fd.append("file", file);
-  const x = new XMLHttpRequest(); x.open("POST", "/api/v1/analyze"); x.setRequestHeader("X-API-Key", KEY);
+  const x = new XMLHttpRequest(); x.open("POST", "/api/v1/analyze"); if (KEY) x.setRequestHeader("X-API-Key", KEY);
   x.upload.onprogress = e => { if (e.lengthComputable) { u.p = .3 * e.loaded / e.total; drawUploads(); } };
   x.onload = () => {
     if (x.status === 401) { askKey(); return; }
@@ -455,7 +455,7 @@ async function pageJob(id, params) {
   return head(`Анализ · id ${id}`, esc(s.file_name && s.file_name !== "—" ? s.file_name : "Видео " + id), `Загружено ${s.created_at ? fmtDate(s.created_at) : "—"} · длительность ${fmtSec(dur)} · время анализа ${fmtSec(r.meta?.processing_sec)}`,
     `<div class="noprint" style="display:flex;gap:8px"><button class="btn" onclick="dlJson()">${ic("dl", 17)}JSON</button><button class="btn" onclick="print()">${ic("print", 17)}Отчёт</button></div>`) +
   `<div class="grid g2">
-    <div><div class="card" style="padding:14px"><div class="player" id="pl"><video id="vid" controls playsinline preload="metadata" src="/api/v1/jobs/${id}/video?key=${encodeURIComponent(KEY)}"></video><canvas id="ov" style="position:absolute;left:0;top:0;pointer-events:none"></canvas></div>
+    <div><div class="card" style="padding:14px"><div class="player" id="pl"><video id="vid" controls playsinline preload="metadata" src="/api/v1/jobs/${id}/video${KEY ? "?key=" + encodeURIComponent(KEY) : ""}"></video><canvas id="ov" style="position:absolute;left:0;top:0;pointer-events:none"></canvas></div>
       <div class="tline" title="Нарушения на шкале времени">${dur ? vs.map((v, i) => `<span class="mk" style="left:${100 * v.timecode_sec / dur}%" title="${esc(v.type)} · ${tc(v.timecode_sec)}" onclick="seekTo(${v.timecode_sec},${i})"></span>`).join("") : ""}<span class="cur" id="cur"></span></div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
         <label style="display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer"><input type="checkbox" id="aiv" checked> Как видит ИИ</label>
@@ -524,7 +524,6 @@ async function pageQuality() {
 // --- API ---
 function pageApi() {
   const host = location.origin;
-  window.showKey = () => { $("#kv").textContent = KEY; };
   return head("API для жюри", "Интеграция", "Формат по разделу 10 ТЗ. Ключ передаётся в заголовке X-API-Key.") +
   `<div class="grid g2"><div class="card">
     <h3>1. Отправить видео</h3><pre>curl -X POST ${esc(host)}/api/v1/analyze \\
@@ -538,9 +537,8 @@ function pageApi() {
    "evidence_frames": [{"timestamp_sec": 13.13, "image_base64": "…"}],
    "rule": "п. 20: …", "source": "Постановление НБРК № 231 …", "confidence": 0.7}]}</pre>
     <p class="t-muted" style="margin-top:10px">Поля <code>rule</code>, <code>source</code>, <code>confidence</code> — дополнительные: пункт нормы РК, документ и уверенность. Обязательная схема ТЗ не нарушается.</p></div>
-  <div class="card"><h3>Ключ доступа</h3><div class="sub">Этот же ключ используется панелью</div>
-    <div style="display:flex;gap:8px;align-items:center;margin:12px 0"><code id="kv" style="flex:1;background:#f5f6f8;padding:9px 11px;border-radius:9px">••••••••••••</code>
-      <button class="btn sm" onclick="showKey()">Показать</button></div>
+  <div class="card"><h3>Ключ доступа</h3><div class="sub">Выдаётся командой вместе с адресом сервиса и передаётся в заголовке <code>X-API-Key</code>. Веб-панели ключ не нужен.</div>
+    <div style="height:14px"></div>
     <div class="kv"><span>status</span><div>processing · done · failed</div><span>verdict</span><div>violation · no_violation</div>
       <span>формат</span><div>.mov (также .mp4), поле file</div><span>без ключа</span><div>401 — запрос отклоняется</div><span>лимит</span><div>ответ за 5 минут на видео</div><span>лица</span><div>не распознаются; на кадрах-доказательствах размываются</div></div>
     <a class="btn" style="margin-top:16px" href="/docs" target="_blank">${ic("ext", 16)}Swagger (все эндпоинты)</a></div></div>`;
@@ -548,7 +546,6 @@ function pageApi() {
 
 // ================= маршрутизация =================
 async function route() {
-  if (!KEY) { renderNav(""); askKey(); return; }
   const [path, qs] = location.hash.replace(/^#\/?/, "").split("?");
   const [page, arg] = (path || "overview").split("/");
   const params = Object.fromEntries(new URLSearchParams(qs || ""));
